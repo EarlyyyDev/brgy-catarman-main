@@ -1,5 +1,5 @@
 import dns from "node:dns";
-import { createApp } from "./app";
+import app from "./app";
 import { env } from "./config/env";
 import { logger } from "./utils/logger.util";
 
@@ -10,8 +10,6 @@ import { logger } from "./utils/logger.util";
 // instead of retrying around a connection that was never going to succeed in
 // time.
 dns.setDefaultResultOrder("ipv4first");
-
-const app = createApp();
 
 app.listen(env.PORT, () => {
   logger.info(`Barangay Catarman backend listening on port ${env.PORT} (${env.NODE_ENV})`);
