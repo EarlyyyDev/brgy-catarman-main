@@ -1,9 +1,31 @@
 import { NextFunction, Request, Response } from "express";
 import multer from "multer";
-import { UploadSubdir, createUploader } from "../config/multer";
+import {
+  CloudinaryConfigurationError,
+  CloudinaryUploadError,
+} from "../config/cloudinary";
+import { UploadSubdir, createUploader } from "../config/uploads";
 import { sendError } from "../utils/apiResponse.util";
 
-/** Wraps a multer single-file upload so failures become the standard error envelope. */
+function handleUploadError(res: Response, error: unknown) {
+  if (error instanceof multer.MulterError) {
+    sendError(res, 400, `Upload error: ${error.message}`);
+    return;
+  }
+  if (error instanceof CloudinaryConfigurationError) {
+    sendError(res, 503, error.message);
+    return;
+  }
+  if (error instanceof CloudinaryUploadError) {
+    console.error(error.message);
+    sendError(res, 502, error.message);
+    return;
+  }
+  const message = error instanceof Error ? error.message : "Upload failed";
+  sendError(res, 400, message);
+}
+
+/** Parses one multipart file and streams it to Cloudinary. */
 export function uploadSingle(subdir: UploadSubdir, fieldName: string, maxSizeMb?: number) {
   const uploader = createUploader(subdir, maxSizeMb).single(fieldName);
 
@@ -13,17 +35,12 @@ export function uploadSingle(subdir: UploadSubdir, fieldName: string, maxSizeMb?
         next();
         return;
       }
-      if (err instanceof multer.MulterError) {
-        sendError(res, 400, `Upload error: ${err.message}`);
-        return;
-      }
-      const message = err instanceof Error ? err.message : "Upload failed";
-      sendError(res, 400, message);
+      handleUploadError(res, err);
     });
   };
 }
 
-/** Wraps a multer multi-file upload (e.g. certificate requirements, evidence photos). */
+/** Parses multipart files and streams them to Cloudinary. */
 export function uploadMultiple(subdir: UploadSubdir, fieldName: string, maxCount = 10) {
   const uploader = createUploader(subdir).array(fieldName, maxCount);
 
@@ -33,12 +50,7 @@ export function uploadMultiple(subdir: UploadSubdir, fieldName: string, maxCount
         next();
         return;
       }
-      if (err instanceof multer.MulterError) {
-        sendError(res, 400, `Upload error: ${err.message}`);
-        return;
-      }
-      const message = err instanceof Error ? err.message : "Upload failed";
-      sendError(res, 400, message);
+      handleUploadError(res, err);
     });
   };
 }

@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { settingsService } from "../services/settings.service";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const getSettings = asyncHandler(async (_req: Request, res: Response) => {
   sendSuccess(res, await settingsService.getFull());
@@ -21,7 +20,7 @@ export const uploadSettingsImage = asyncHandler(async (req: Request, res: Respon
     sendSuccess(res, { message: "No file uploaded" }, 400);
     return;
   }
-  sendSuccess(res, { url: publicUrlFor("settings", req.file.filename) }, 201);
+  sendSuccess(res, { url: req.file.path }, 201);
 });
 
 export const submitContactForm = asyncHandler(async (req: Request, res: Response) => {

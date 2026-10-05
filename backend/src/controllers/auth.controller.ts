@@ -7,7 +7,6 @@ import { setAuthCookies, clearAuthCookies } from "../utils/cookies.util";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { ApiError } from "../utils/apiError.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password, rememberMe } = req.body as { email: string; password: string; rememberMe?: boolean };
@@ -100,7 +99,7 @@ export const updateOwnAvatar = asyncHandler(async (req: Request, res: Response) 
     sendSuccess(res, { message: "No file uploaded" }, 400);
     return;
   }
-  const url = publicUrlFor("staff", req.file.filename);
+  const url = req.file.path;
   const user = await userService.updateAvatar(req.user!.id, url, req);
   sendSuccess(res, user);
 });

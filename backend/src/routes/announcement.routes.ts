@@ -3,7 +3,6 @@ import * as announcementController from "../controllers/announcement.controller"
 import { requireAuth } from "../middlewares/auth.middleware";
 import { validateMiddleware } from "../middlewares/validate.middleware";
 import { uploadSingle } from "../middlewares/upload.middleware";
-import { publicUrlFor } from "../config/multer";
 import { announcementValidator } from "../validators/announcement.validators";
 import { asyncHandler } from "../utils/asyncHandler.util";
 import { sendSuccess } from "../utils/apiResponse.util";
@@ -41,7 +40,7 @@ router.post(
       res,
       {
         name: req.file.originalname,
-        url: publicUrlFor("announcements", req.file.filename),
+        url: req.file.path,
         mimeType: req.file.mimetype,
         sizeKb: Math.round(req.file.size / 1024),
       },

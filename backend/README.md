@@ -13,7 +13,7 @@ pass can wire real requests in without a mismatched API. No frontend files were 
 - Prisma ORM 6 against Neon serverless PostgreSQL
 - JWT access/refresh cookies (httpOnly), refresh-token rotation with reuse detection, CSRF double-submit cookie
 - bcryptjs password hashing
-- express-validator, express-rate-limit, helmet, multer (disk storage)
+- express-validator, express-rate-limit, helmet, multer (multipart parsing), Cloudinary (file storage)
 
 ## Getting started
 
@@ -37,6 +37,13 @@ direct connection strings), `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` (32+ char r
 
 `.env` is gitignored and must never be committed. `DATABASE_URL` is read only on the server — it is never sent to
 the frontend, hardcoded in source, or exposed through any API response.
+
+Uploads are streamed directly from Multer to Cloudinary; the backend does not
+write new uploads to local disk. Set `CLOUDINARY_CLOUD_NAME`,
+`CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the deployment environment.
+Upload endpoints return Cloudinary secure URLs. Existing records that still use
+`/uploads/...` URLs require their original local files to remain available or to
+be migrated separately.
 
 ## Seeding
 
@@ -93,10 +100,11 @@ need the `X-CSRF-Token` header to match the `csrf_token` cookie once a session e
 | `/api/dashboard/stats` | auth | Aggregate counts/breakdowns for dashboard widgets |
 | `/api/public` | public | Anonymous certificate/complaint submission + tracking, published announcements + engagement, public officials/emergency-contacts/activities/settings, contact form |
 
-Uploaded files (resident photos, certificate requirements, complaint evidence, announcement attachments) are
-served statically from `/uploads`. Backup files are **not** — they live in `backend/backups/` (gitignored,
+Newly uploaded files (resident photos, certificate requirements, complaint evidence, announcement attachments) are
+stored in Cloudinary. Backup files are **not** — they live in `backend/backups/` (gitignored,
 never mounted on any static route) and can only be reached through the authenticated, admin-only
 `/api/backups/:id/download` endpoint, since a backup file contains every user's `passwordHash`.
+The `/uploads` static route remains for legacy local files; new uploads are not written there.
 
 ## Backups
 

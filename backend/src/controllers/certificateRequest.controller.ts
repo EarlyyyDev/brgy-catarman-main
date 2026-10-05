@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { certificateRequestService } from "../services/certificateRequest.service";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const listCertificateRequests = asyncHandler(async (req: Request, res: Response) => {
   const { search, status, documentTypeId, channel } = req.query as Record<string, string | undefined>;
@@ -61,7 +60,7 @@ export const uploadCertificateRequirement = asyncHandler(async (req: Request<{ i
     req.params.id,
     {
       name: req.file.originalname,
-      url: publicUrlFor("certificates", req.file.filename),
+      url: req.file.path,
       sizeKb: Math.round(req.file.size / 1024),
       mimeType: req.file.mimetype,
     },

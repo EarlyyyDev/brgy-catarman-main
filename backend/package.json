@@ -24,6 +24,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.11.0",
     "compression": "^1.7.5",
     "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",

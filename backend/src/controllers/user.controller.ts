@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { userService } from "../services/user.service";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
   const { role, status, search } = req.query as {
@@ -57,7 +56,7 @@ export const updateUserAvatar = asyncHandler(async (req: Request<{ id: string }>
     sendSuccess(res, { message: "No file uploaded" }, 400);
     return;
   }
-  const url = publicUrlFor("staff", req.file.filename);
+  const url = req.file.path;
   const user = await userService.updateAvatar(req.params.id, url, req);
   sendSuccess(res, user);
 });

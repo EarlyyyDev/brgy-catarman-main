@@ -28,6 +28,9 @@ const envSchema = z.object({
 
   UPLOAD_MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(50),
   UPLOAD_DIR: z.string().default("uploads"),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 
   // Resident-facing transactional email (submission confirmations, status
   // updates). Left optional -- if unset, emails are skipped with a warning

@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { complaintService } from "../services/complaint.service";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const listComplaints = asyncHandler(async (req: Request, res: Response) => {
   const { search, status, category } = req.query as Record<string, string | undefined>;
@@ -51,7 +50,7 @@ export const addComplaintPhoto = asyncHandler(async (req: Request<{ id: string }
     {
       type,
       source,
-      photoUrl: publicUrlFor("complaints", req.file.filename),
+      photoUrl: req.file.path,
       latitude: latitude ? Number(latitude) : undefined,
       longitude: longitude ? Number(longitude) : undefined,
       ipAddress: req.ip,

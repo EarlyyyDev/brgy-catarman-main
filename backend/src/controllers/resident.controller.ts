@@ -3,7 +3,6 @@ import { residentService } from "../services/resident.service";
 import { residentRepository } from "../repositories/resident.repository";
 import { sendSuccess } from "../utils/apiResponse.util";
 import { asyncHandler } from "../utils/asyncHandler.util";
-import { publicUrlFor } from "../config/multer";
 
 export const listResidents = asyncHandler(async (req: Request, res: Response) => {
   const { search, purokId, householdId, tagType } = req.query as Record<string, string | undefined>;
@@ -58,7 +57,7 @@ export const uploadResidentPhoto = asyncHandler(async (req: Request<{ id: string
     sendSuccess(res, { message: "No file uploaded" }, 400);
     return;
   }
-  const url = publicUrlFor("residents", req.file.filename);
+  const url = req.file.path;
   const resident = await residentService.update(req.params.id, { photoUrl: url }, req);
   sendSuccess(res, resident);
 });
