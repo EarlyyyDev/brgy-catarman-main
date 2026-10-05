@@ -11,7 +11,14 @@ import { parsePagination, toPaginationResult } from "../utils/pagination.util";
 export const BACKUP_DIR = path.join(process.cwd(), "backups");
 const BACKUP_FORMAT_VERSION = 1;
 
-if (!fs.existsSync(BACKUP_DIR)) {
+function ensureBackupStorageAvailable() {
+  if (process.env.VERCEL === "1") {
+    throw new ApiError(
+      503,
+      "Backups require persistent file storage and are unavailable on Vercel. Configure an external backup storage provider to enable them.",
+    );
+  }
+
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
@@ -65,6 +72,7 @@ function delegate(model: BackupModel) {
 }
 
 async function runManualBackup(req: Request) {
+  ensureBackupStorageAvailable();
   const fileName = `backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
   const filePath = path.join(BACKUP_DIR, fileName);
 
@@ -109,6 +117,7 @@ async function runManualBackup(req: Request) {
 }
 
 async function listBackups(req: Request) {
+  ensureBackupStorageAvailable();
   const params = parsePagination(req);
   const [items, total] = await Promise.all([
     backupRepository.list({ skip: params.skip, take: params.take }),
@@ -118,6 +127,7 @@ async function listBackups(req: Request) {
 }
 
 async function getBackupFile(id: string) {
+  ensureBackupStorageAvailable();
   const record = await backupRepository.findById(id);
   if (!record) throw ApiError.notFound("Backup not found");
 
@@ -188,6 +198,7 @@ async function restoreBackup(id: string, req: Request) {
 }
 
 async function deleteBackup(id: string, req: Request) {
+  ensureBackupStorageAvailable();
   const record = await backupRepository.findById(id);
   if (!record) throw ApiError.notFound("Backup not found");
 

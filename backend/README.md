@@ -109,7 +109,9 @@ The `/uploads` static route remains for legacy local files; new uploads are not 
 ## Backups
 
 `POST /api/backups` performs a real Prisma-based JSON export of every substantive table (not `pg_dump`, which
-isn't available in this environment) to a timestamped file in `backend/backups/`. `POST /api/backups/:id/restore`
+isn't available in this environment) to a timestamped file in `backend/backups/`. This file-based backup feature
+requires persistent writable storage and returns `503` on Vercel, whose serverless filesystem is not persistent.
+Configure a persistent external backup storage provider before enabling backups on Vercel. `POST /api/backups/:id/restore`
 wipes and re-populates those same tables from a prior export inside one transaction — this necessarily
 invalidates all active sessions (deleting `User` rows cascades to `Session`/`RefreshToken`), so every user is
 logged out after a restore and must sign in again. `Session`/`RefreshToken` themselves are intentionally excluded
