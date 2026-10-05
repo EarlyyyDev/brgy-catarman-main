@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment variables (never commit real secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+
+# Build output
+backend/dist/
+frontend/build/
+
+# Uploaded user files (runtime data, not source)
+backend/uploads/
+
+# Local dev TLS certs
+frontend/certificates/*.pem
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Misc
+*.tsbuildinfo

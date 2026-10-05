@@ -1,0 +1,913 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────── ENUMS ───────────────────────────────
+
+enum UserRole {
+  STAFF
+  ADMINISTRATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum CivilStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  SEPARATED
+  DIVORCED
+}
+
+enum ResidentTagType {
+  SENIOR_CITIZEN
+  PWD
+  SOLO_PARENT
+  WOMAN
+  FISHERFOLK
+  FOUR_PS_BENEFICIARY
+  INDIGENT
+  INDIGENOUS
+  YOUTH
+  PREGNANT
+  STUDENT
+  OFW
+  VETERAN
+}
+
+enum HouseholdClassification {
+  NHTS_POOR
+  LOW_INCOME
+  MIDDLE_INCOME
+  NOT_CLASSIFIED
+}
+
+enum IncidentPhotoType {
+  REPORTER_CAPTURE
+  EVIDENCE
+}
+
+enum PhotoSource {
+  LIVE_CAMERA
+  FILE_UPLOAD
+}
+
+enum CertificateStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  READY_FOR_CLAIM
+  CLAIMED
+}
+
+enum RequestChannel {
+  ONLINE
+  WALK_IN
+}
+
+enum TemplateStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum IncidentCategory {
+  LOITERING
+  NOISE_COMPLAINT
+  ILLEGAL_PARKING
+  PUBLIC_DISTURBANCE
+  ILLEGAL_DUMPING
+  VANDALISM
+  OTHER
+}
+
+enum ComplaintStatus {
+  NEW
+  UNDER_REVIEW
+  VALIDATED
+  RESOLVED
+  ARCHIVED
+  DISMISSED
+}
+
+enum BlotterStatus {
+  OPEN
+  UNDER_MEDIATION
+  SETTLED
+  ESCALATED_TO_COURT
+  CLOSED
+  ARCHIVED
+}
+
+enum HearingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AnnouncementCategory {
+  GENERAL
+  HEALTH
+  SAFETY
+  EVENT
+  ADVISORY
+  JOB_OPENING
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum ReactionTargetType {
+  POST
+  COMMENT
+}
+
+enum ReactionKey {
+  LIKE
+  LOVE
+  CARE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+enum EmergencyContactCategory {
+  POLICE
+  FIRE
+  MEDICAL
+  DISASTER_RESPONSE
+  BARANGAY_HOTLINE
+  OTHER
+}
+
+enum BackupType {
+  MANUAL
+  AUTOMATIC
+}
+
+enum BackupStatus {
+  COMPLETED
+  FAILED
+  IN_PROGRESS
+}
+
+enum ActivityModule {
+  AUTHENTICATION
+  RESIDENTS
+  HOUSEHOLDS
+  CERTIFICATES
+  COMPLAINTS
+  BLOTTERS
+  ANNOUNCEMENTS
+  SETTINGS
+  BACKUP
+  STAFF
+}
+
+enum ActivityActorRole {
+  STAFF
+  ADMINISTRATOR
+  SYSTEM
+}
+
+enum ActivityStatus {
+  SUCCESS
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// ─────────────────────────── AUTH / RBAC ───────────────────────────
+
+model User {
+  id                  String     @id @default(uuid()) @db.Uuid
+  name                String
+  email               String     @unique
+  passwordHash        String
+  role                UserRole
+  position            String
+  avatarUrl           String?
+  status              UserStatus @default(ACTIVE)
+  contactNumber       String?
+  lastLoginAt         DateTime?
+  mustChangePassword  Boolean    @default(false)
+  securityQuestion1   String?
+  securityAnswer1Hash String?
+  securityQuestion2   String?
+  securityAnswer2Hash String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  deletedAt           DateTime?
+
+  sessions              Session[]
+  refreshTokens         RefreshToken[]
+  activityLogs          ActivityLog[]
+  createdResidents      Resident[]           @relation("ResidentCreatedBy")
+  createdHouseholds     Household[]          @relation("HouseholdCreatedBy")
+  processedCertificates CertificateRequest[] @relation("CertificateProcessedBy")
+  mediatedBlotters      Blotter[]            @relation("BlotterMediator")
+  authoredAnnouncements Announcement[]       @relation("AnnouncementAuthor")
+  authoredComments      Comment[]            @relation("CommentAuthor")
+  authoredReplies       CommentReply[]       @relation("ReplyAuthor")
+  reactions             Reaction[]           @relation("ReactionUser")
+  triggeredBackups      BackupRecord[]       @relation("BackupTriggeredBy")
+  createdResidentTags   ResidentTag[]        @relation("ResidentTagCreatedBy")
+
+  @@index([email])
+  @@map("users")
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id                String    @id @default(uuid()) @db.Uuid
+  sessionId         String    @db.Uuid
+  session           Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId            String    @db.Uuid
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash         String    @unique
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?   @db.Uuid
+  createdAt         DateTime  @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────── GEOGRAPHY ───────────────────────────
+
+model Sitio {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  puroks     Purok[]
+  households Household[]
+
+  @@map("sitios")
+}
+
+model Purok {
+  id        String   @id @default(uuid()) @db.Uuid
+  sitioId   String   @db.Uuid
+  sitio     Sitio    @relation(fields: [sitioId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  residents  Resident[]
+  households Household[]
+
+  @@unique([sitioId, name])
+  @@map("puroks")
+}
+
+// ─────────────────────────── RESIDENTS / HOUSEHOLDS ───────────────────────────
+
+model Resident {
+  id                     String      @id @default(uuid()) @db.Uuid
+  photoUrl               String?
+  firstName              String
+  middleName             String?
+  lastName               String
+  suffix                 String?
+  gender                 Gender
+  birthdate              DateTime    @db.Date
+  civilStatus            CivilStatus
+  religion               String?
+  occupation             String?
+  educationalAttainment  String?
+  purokId                String      @db.Uuid
+  purok                  Purok       @relation(fields: [purokId], references: [id])
+  street                 String
+  houseNumber            String
+  contactNumber          String
+  email                  String?
+  householdId            String?     @db.Uuid
+  household              Household?  @relation("HouseholdMembers", fields: [householdId], references: [id])
+  relationshipToHead     String?
+  emergencyContactName   String?
+  emergencyContactNumber String?
+  isRegisteredVoter      Boolean     @default(false)
+  isHouseholdHead        Boolean     @default(false)
+  isActive               Boolean     @default(true)
+  createdById            String?     @db.Uuid
+  createdBy              User?       @relation("ResidentCreatedBy", fields: [createdById], references: [id])
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  deletedAt              DateTime?
+
+  headOfHousehold           Household?                @relation("HouseholdHead")
+  certificateRequests       CertificateRequest[]
+  certificateRequestBatches CertificateRequestBatch[]
+  complaints                Complaint[]
+  tags                      ResidentTag[]
+
+  @@index([lastName, firstName])
+  @@index([purokId])
+  @@index([householdId])
+  @@map("residents")
+}
+
+model ResidentTag {
+  id            String          @id @default(uuid()) @db.Uuid
+  residentId    String          @db.Uuid
+  resident      Resident        @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  tagType       ResidentTagType
+  remarks       String?
+  effectiveDate DateTime?       @db.Date
+  expiryDate    DateTime?       @db.Date
+  isActive      Boolean         @default(true)
+  createdById   String?         @db.Uuid
+  createdBy     User?           @relation("ResidentTagCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([residentId, tagType])
+  @@map("resident_tags")
+}
+
+model Household {
+  id               String                  @id @default(uuid()) @db.Uuid
+  householdNumber  String                  @unique
+  sitioId          String                  @db.Uuid
+  sitio            Sitio                   @relation(fields: [sitioId], references: [id])
+  purokId          String                  @db.Uuid
+  purok            Purok                   @relation(fields: [purokId], references: [id])
+  street           String
+  houseNumber      String
+  headResidentId   String?                 @unique @db.Uuid
+  headResident     Resident?               @relation("HouseholdHead", fields: [headResidentId], references: [id])
+  contactNumber    String
+  classification   HouseholdClassification @default(NOT_CLASSIFIED)
+  is4PsBeneficiary Boolean                 @default(false)
+  isArchived       Boolean                 @default(false)
+  createdById      String?                 @db.Uuid
+  createdBy        User?                   @relation("HouseholdCreatedBy", fields: [createdById], references: [id])
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  deletedAt        DateTime?
+
+  members Resident[] @relation("HouseholdMembers")
+
+  @@index([purokId])
+  @@map("households")
+}
+
+// ─────────────────────────── CERTIFICATES ───────────────────────────
+
+model DocumentType {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @unique
+  code         String    @unique
+  description  String?
+  requirements String[]
+  fee          Decimal   @default(0) @db.Decimal(10, 2)
+  validityDays Int?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  templates CertificateTemplate[]
+  requests  CertificateRequest[]
+
+  @@map("document_types")
+}
+
+model CertificateTemplate {
+  id                   String         @id @default(uuid()) @db.Uuid
+  name                 String
+  documentTypeId       String         @db.Uuid
+  documentType         DocumentType   @relation(fields: [documentTypeId], references: [id])
+  status               TemplateStatus @default(ACTIVE)
+  requireResidentPhoto Boolean        @default(false)
+  showBarangayLogo     Boolean        @default(true)
+  showMunicipalLogo    Boolean        @default(false)
+  showBarangayDrySeal  Boolean        @default(false)
+  logoSize             Int            @default(80)
+  bodyHtml             String         @db.Text
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  deletedAt            DateTime?
+
+  @@map("certificate_templates")
+}
+
+// A single form submission requesting multiple document types at once --
+// shares one resident-facing reference number, but each requested document
+// underneath is still its own independent CertificateRequest with its own
+// status/timeline/control number, since staff process each document on its
+// own schedule (e.g. one approved while another is still pending).
+model CertificateRequestBatch {
+  id              String         @id @default(uuid()) @db.Uuid
+  referenceNumber String         @unique
+  requestorName   String
+  address         String
+  contactNumber   String
+  email           String
+  residentId      String?        @db.Uuid
+  resident        Resident?      @relation(fields: [residentId], references: [id])
+  channel         RequestChannel
+  submittedAt     DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  requests CertificateRequest[]
+
+  @@index([referenceNumber])
+  @@map("certificate_request_batches")
+}
+
+model CertificateRequest {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  referenceNumber        String                   @unique
+  controlNumber          String?
+  documentTypeId         String                   @db.Uuid
+  documentType           DocumentType             @relation(fields: [documentTypeId], references: [id])
+  otherDocumentLabel     String?
+  requestorName          String
+  address                String
+  contactNumber          String
+  email                  String
+  purpose                String
+  residentId             String?                  @db.Uuid
+  resident               Resident?                @relation(fields: [residentId], references: [id])
+  residentPhotoUrl       String?
+  // Groups multiple document requests submitted together under one shared,
+  // resident-facing reference number. Null for walk-in requests and any
+  // request predating this feature -- those are tracked by their own
+  // individual referenceNumber instead.
+  batchId                String?                  @db.Uuid
+  batch                  CertificateRequestBatch? @relation(fields: [batchId], references: [id])
+  channel                RequestChannel
+  status                 CertificateStatus        @default(PENDING)
+  // Snapshot of the document type's fee at the moment this request was
+  // claimed (revenue is only ever recognized on CLAIMED) -- a later price
+  // change in Settings must never retroactively change what past requests
+  // are counted as worth in revenue reports.
+  feeAmount              Decimal?                 @db.Decimal(10, 2)
+  staffNotes             String?
+  rejectionReason        String?
+  processedById          String?                  @db.Uuid
+  processedBy            User?                    @relation("CertificateProcessedBy", fields: [processedById], references: [id])
+  authorizationLetterUrl String?
+  representativeIdUrl    String?
+  submittedAt            DateTime                 @default(now())
+  reviewedAt             DateTime?
+  approvedAt             DateTime?
+  claimDeadline          DateTime?
+  claimedAt              DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  deletedAt              DateTime?
+
+  requirements CertificateRequirement[]
+  timeline     CertificateTimelineEvent[]
+
+  @@index([status])
+  @@index([referenceNumber])
+  @@map("certificate_requests")
+}
+
+model CertificateRequirement {
+  id                   String             @id @default(uuid()) @db.Uuid
+  certificateRequestId String             @db.Uuid
+  certificateRequest   CertificateRequest @relation(fields: [certificateRequestId], references: [id], onDelete: Cascade)
+  name                 String
+  url                  String
+  sizeKb               Int
+  mimeType             String
+  uploadedAt           DateTime           @default(now())
+
+  @@map("certificate_requirements")
+}
+
+model CertificateTimelineEvent {
+  id                   String             @id @default(uuid()) @db.Uuid
+  certificateRequestId String             @db.Uuid
+  certificateRequest   CertificateRequest @relation(fields: [certificateRequestId], references: [id], onDelete: Cascade)
+  label                String
+  description          String?
+  actor                String?
+  timestamp            DateTime           @default(now())
+
+  @@map("certificate_timeline_events")
+}
+
+// ─────────────────────────── COMPLAINTS ───────────────────────────
+
+model Complaint {
+  id                 String           @id @default(uuid()) @db.Uuid
+  referenceNumber    String           @unique
+  category           IncidentCategory
+  otherCategoryLabel String?
+  reporterName       String
+  reporterPhone      String
+  reporterEmail      String
+  residentId         String?          @db.Uuid
+  resident           Resident?        @relation(fields: [residentId], references: [id])
+  reportedPerson     String?
+  location           String
+  latitude           Decimal?         @db.Decimal(10, 7)
+  longitude          Decimal?         @db.Decimal(10, 7)
+  incidentDate       DateTime         @db.Date
+  incidentTime       String
+  description        String           @db.Text
+  reporterPhotoUrl   String?
+  status             ComplaintStatus  @default(NEW)
+  staffNotes         String?
+  isConfidential     Boolean          @default(true)
+  submittedAt        DateTime         @default(now())
+  resolvedAt         DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  deletedAt          DateTime?
+
+  timeline ComplaintTimelineEvent[]
+  photos   IncidentPhoto[]
+
+  @@index([status])
+  @@map("complaints")
+}
+
+model ComplaintTimelineEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  complaintId String    @db.Uuid
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  label       String
+  description String?
+  actor       String?
+  timestamp   DateTime  @default(now())
+
+  @@map("complaint_timeline_events")
+}
+
+/// Structured evidence-photo audit trail — distinguishes a reporter's
+/// mandatory live-camera verification capture from general uploaded
+/// evidence, with per-photo geolocation/device metadata.
+model IncidentPhoto {
+  id          String            @id @default(uuid()) @db.Uuid
+  complaintId String            @db.Uuid
+  complaint   Complaint         @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  type        IncidentPhotoType
+  source      PhotoSource
+  photoUrl    String
+  latitude    Decimal?          @db.Decimal(10, 7)
+  longitude   Decimal?          @db.Decimal(10, 7)
+  deviceInfo  String?
+  ipAddress   String?
+  capturedAt  DateTime          @default(now())
+
+  @@map("incident_photos")
+}
+
+// ─────────────────────────── BLOTTERS ───────────────────────────
+
+model BlotterTemplate {
+  id                  String         @id @default(uuid()) @db.Uuid
+  name                String
+  status              TemplateStatus @default(ACTIVE)
+  showBarangayLogo    Boolean        @default(true)
+  showMunicipalLogo   Boolean        @default(false)
+  showBarangayDrySeal Boolean        @default(false)
+  logoSize            Int            @default(80)
+  bodyHtml            String         @db.Text
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  deletedAt           DateTime?
+
+  @@map("blotter_templates")
+}
+
+model Blotter {
+  id                 String        @id @default(uuid()) @db.Uuid
+  caseNumber         String        @unique
+  incidentType       String
+  complainantName    String
+  complainantAddress String
+  complainantContact String
+  respondentName     String
+  respondentAddress  String
+  incidentDate       DateTime      @db.Date
+  location           String
+  narrative          String        @db.Text
+  status             BlotterStatus @default(OPEN)
+  mediatorId         String?       @db.Uuid
+  mediator           User?         @relation("BlotterMediator", fields: [mediatorId], references: [id])
+  resolution         String?       @db.Text
+  isArchived         Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+
+  hearings BlotterHearing[]
+  history  BlotterHistoryEvent[]
+
+  @@index([status])
+  @@map("blotters")
+}
+
+model BlotterHearing {
+  id        String        @id @default(uuid()) @db.Uuid
+  blotterId String        @db.Uuid
+  blotter   Blotter       @relation(fields: [blotterId], references: [id], onDelete: Cascade)
+  date      DateTime      @db.Date
+  notes     String?
+  status    HearingStatus @default(SCHEDULED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("blotter_hearings")
+}
+
+model BlotterHistoryEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  blotterId   String   @db.Uuid
+  blotter     Blotter  @relation(fields: [blotterId], references: [id], onDelete: Cascade)
+  label       String
+  description String?
+  actor       String?
+  timestamp   DateTime @default(now())
+
+  @@map("blotter_history_events")
+}
+
+// ─────────────────────────── ANNOUNCEMENTS / ENGAGEMENT ───────────────────────────
+
+model Announcement {
+  id        String               @id @default(uuid()) @db.Uuid
+  title     String
+  content   String               @db.Text
+  excerpt   String
+  imageUrl  String?
+  category  AnnouncementCategory @default(GENERAL)
+  isPinned  Boolean              @default(false)
+  status    AnnouncementStatus   @default(DRAFT)
+  publishAt DateTime
+  authorId  String?              @db.Uuid
+  author    User?                @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  deletedAt DateTime?
+
+  attachments AnnouncementAttachment[]
+  comments    Comment[]
+
+  @@index([status, publishAt])
+  @@map("announcements")
+}
+
+model AnnouncementAttachment {
+  id             String       @id @default(uuid()) @db.Uuid
+  announcementId String       @db.Uuid
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  name           String
+  url            String
+  mimeType       String
+  sizeKb         Int
+  isMedia        Boolean      @default(false)
+
+  @@map("announcement_attachments")
+}
+
+model Comment {
+  id             String       @id @default(uuid()) @db.Uuid
+  announcementId String       @db.Uuid
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  text           String       @db.Text
+  authorId       String?      @db.Uuid
+  author         User?        @relation("CommentAuthor", fields: [authorId], references: [id])
+  authorName     String
+  authorRole     UserRole?
+  viewerKey      String?
+  createdAt      DateTime     @default(now())
+
+  replies CommentReply[]
+
+  @@index([announcementId])
+  @@map("comments")
+}
+
+model CommentReply {
+  id         String    @id @default(uuid()) @db.Uuid
+  commentId  String    @db.Uuid
+  comment    Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  text       String    @db.Text
+  authorId   String?   @db.Uuid
+  author     User?     @relation("ReplyAuthor", fields: [authorId], references: [id])
+  authorName String
+  authorRole UserRole?
+  viewerKey  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([commentId])
+  @@map("comment_replies")
+}
+
+model Reaction {
+  id         String             @id @default(uuid()) @db.Uuid
+  targetType ReactionTargetType
+  targetId   String             @db.Uuid
+  viewerKey  String?
+  userId     String?            @db.Uuid
+  user       User?              @relation("ReactionUser", fields: [userId], references: [id])
+  reaction   ReactionKey
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([targetType, targetId, viewerKey])
+  @@index([targetType, targetId])
+  @@map("reactions")
+}
+
+// ─────────────────────────── DIRECTORY ───────────────────────────
+
+model Official {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  position      String
+  committee     String?
+  photoUrl      String?
+  order         Int       @default(0)
+  termStart     DateTime  @db.Date
+  termEnd       DateTime  @db.Date
+  contactNumber String?
+  email         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@map("officials")
+}
+
+model EmergencyContact {
+  id            String                   @id @default(uuid()) @db.Uuid
+  name          String
+  category      EmergencyContactCategory
+  contactNumber String
+  address       String?
+  availability  String
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@map("emergency_contacts")
+}
+
+model Activity {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  description String    @db.Text
+  location    String
+  startDate   DateTime  @db.Date
+  endDate     DateTime  @db.Date
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("activities")
+}
+
+// ─────────────────────────── SYSTEM ───────────────────────────
+
+/// Singleton settings row — repository always upserts on the fixed id "default".
+model SystemSettings {
+  id                   String   @id @default("default")
+  barangayName         String   @default("Barangay Catarman")
+  municipality         String?
+  province             String?
+  zipCode              String?
+  fullAddress          String?
+  logoUrl              String?
+  sealUrl              String?
+  municipalLogoUrl     String?
+  documentLogoUrl      String?
+  heroBackgroundUrl    String?
+  loginBackgroundUrl   String?
+  aiAssistantAvatarUrl String?
+  contactNumbers       String[]
+  emailAddress         String?
+  officeHours          String?
+  facebookUrl          String?
+  missionStatement     String?  @db.Text
+  visionStatement      String?  @db.Text
+  historyText          String?  @db.Text
+  goals                String[]
+  objectives           String[]
+  founded              String?
+  landArea             String?
+  population           String?
+  smtpHost             String?
+  smtpPort             String?
+  smtpUsername         String?
+  smtpSenderName       String?
+  themePrimaryColor    String?
+  themeAccentColor     String?
+  claimDeadlineDays    Int      @default(30)
+  autoExpireHours      Int      @default(72)
+  maintenanceMode      Boolean  @default(false)
+  maintenanceMessage   String?  @db.Text
+  updatedById          String?  @db.Uuid
+  updatedAt            DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model BackupRecord {
+  id            String       @id @default(uuid()) @db.Uuid
+  fileName      String
+  sizeMb        Decimal      @db.Decimal(10, 2)
+  type          BackupType
+  status        BackupStatus @default(IN_PROGRESS)
+  triggeredById String?      @db.Uuid
+  triggeredBy   User?        @relation("BackupTriggeredBy", fields: [triggeredById], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@map("backup_records")
+}
+
+model ActivityLog {
+  id          String            @id @default(uuid()) @db.Uuid
+  actorId     String?           @db.Uuid
+  actor       User?             @relation(fields: [actorId], references: [id])
+  actorName   String
+  actorRole   ActivityActorRole
+  action      String
+  module      ActivityModule
+  description String?
+  ipAddress   String?
+  browser     String?
+  status      ActivityStatus    @default(SUCCESS)
+  timestamp   DateTime          @default(now())
+
+  @@index([actorId])
+  @@index([module])
+  @@map("activity_logs")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  title     String
+  message   String           @db.Text
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  @@index([isRead])
+  @@map("notifications")
+}
+
+/// Atomic per-scope counter used to generate human-readable sequential
+/// reference numbers (e.g. BC-2026-00001) inside a DB transaction.
+model ReferenceNumber {
+  id        String   @id @default(uuid()) @db.Uuid
+  scope     String   @unique
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("reference_numbers")
+}

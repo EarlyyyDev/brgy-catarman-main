@@ -1,0 +1,48 @@
+import { Router } from "express";
+import healthRoutes from "./health.routes";
+import authRoutes from "./auth.routes";
+import userRoutes from "./user.routes";
+import geographyRoutes from "./geography.routes";
+import residentRoutes from "./resident.routes";
+import householdRoutes from "./household.routes";
+import documentTypeRoutes from "./documentType.routes";
+import certificateTemplateRoutes from "./certificateTemplate.routes";
+import certificateRequestRoutes from "./certificateRequest.routes";
+import complaintRoutes from "./complaint.routes";
+import blotterRoutes from "./blotter.routes";
+import blotterTemplateRoutes from "./blotterTemplate.routes";
+import announcementRoutes from "./announcement.routes";
+import { officialsRouter, emergencyContactsRouter, activitiesRouter } from "./directory.routes";
+import settingsRoutes from "./settings.routes";
+import backupRoutes from "./backup.routes";
+import notificationRoutes from "./notification.routes";
+import activityLogRoutes from "./activityLog.routes";
+import dashboardRoutes from "./dashboard.routes";
+import publicRoutes from "./public.routes";
+
+const router = Router();
+
+router.use("/health", healthRoutes);
+router.use("/auth", authRoutes);
+router.use("/users", userRoutes);
+router.use("/geography", geographyRoutes);
+router.use("/residents", residentRoutes);
+router.use("/households", householdRoutes);
+router.use("/document-types", documentTypeRoutes);
+router.use("/certificate-templates", certificateTemplateRoutes);
+router.use("/certificate-requests", certificateRequestRoutes);
+router.use("/complaints", complaintRoutes);
+router.use("/blotters", blotterRoutes);
+router.use("/blotter-templates", blotterTemplateRoutes);
+router.use("/announcements", announcementRoutes);
+router.use("/officials", officialsRouter);
+router.use("/emergency-contacts", emergencyContactsRouter);
+router.use("/activities", activitiesRouter);
+router.use("/settings", settingsRoutes);
+router.use("/backups", backupRoutes);
+router.use("/notifications", notificationRoutes);
+router.use("/activity-logs", activityLogRoutes);
+router.use("/dashboard", dashboardRoutes);
+router.use("/public", publicRoutes);
+
+export default router;

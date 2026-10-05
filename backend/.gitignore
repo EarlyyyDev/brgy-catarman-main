@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.*.local
+!.env.example
+uploads/**/*
+!uploads/**/.gitkeep
+# Backup dumps contain password hashes and full resident/complaint data —
+# never public, never committed. Stored outside uploads/ so express.static
+# never accidentally serves them.
+backups/*
+!backups/.gitkeep
+*.log
+*.tsbuildinfo
