@@ -239,7 +239,9 @@ export function AiAssistantWidget() {
 }
 
 function AssistantAvatar({ avatarUrl, size }: { avatarUrl?: string; size: number }) {
-  if (avatarUrl) {
+  const [failedUrl, setFailedUrl] = React.useState<string | undefined>()
+
+  if (avatarUrl && failedUrl !== avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -247,6 +249,7 @@ function AssistantAvatar({ avatarUrl, size }: { avatarUrl?: string; size: number
         alt=""
         className="rounded-full object-cover"
         style={{ width: size, height: size }}
+        onError={() => setFailedUrl(avatarUrl)}
       />
     )
   }

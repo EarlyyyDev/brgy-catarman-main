@@ -1,14 +1,26 @@
 "use client"
 
 import * as React from "react"
-import { Camera, Trash2, VideoOff } from "lucide-react"
+import { Camera, Trash2, Upload, VideoOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getCameraErrorMessage, requestCameraStream } from "@/lib/camera"
+import { resizeImageFile } from "@/lib/image-resize"
+import type { EvidencePhoto } from "@/types"
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "image/heic",
+  "image/heif",
+])
 
 interface MultiCameraCaptureProps {
-  value: string[]
-  onChange: (photos: string[]) => void
+  value: EvidencePhoto[]
+  onChange: (photos: EvidencePhoto[]) => void
   className?: string
   helperText?: string
   maxPhotos?: number
@@ -18,12 +30,14 @@ export function MultiCameraCapture({
   value,
   onChange,
   className,
-  helperText = "Capture live photos of the incident using your camera. Gallery uploads are not accepted for this field.",
+  helperText = "Capture photos now or upload evidence photos from your gallery or files.",
   maxPhotos = 6,
 }: MultiCameraCaptureProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const streamRef = React.useRef<MediaStream | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [isStreaming, setIsStreaming] = React.useState(false)
+  const [isReadingFiles, setIsReadingFiles] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   const stopStream = React.useCallback(() => {
@@ -44,7 +58,7 @@ export function MultiCameraCapture({
     }
   }, [isStreaming])
 
-  const atLimit = value.length >= maxPhotos
+  const atLimit = value.length >= maxPhotos || isReadingFiles
 
   async function startCamera() {
     setError(null)
@@ -66,9 +80,44 @@ export function MultiCameraCapture({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const next = [...value, canvas.toDataURL("image/jpeg", 0.85)]
+    const next = [...value, { dataUrl: canvas.toDataURL("image/jpeg", 0.85), source: "LIVE_CAMERA" as const }]
     onChange(next)
     if (next.length >= maxPhotos) stopStream()
+  }
+
+  async function addFiles(files: FileList | null) {
+    if (!files?.length) return
+    setError(null)
+
+    const remainingSlots = maxPhotos - value.length
+    if (files.length > remainingSlots) {
+      setError(`You can add up to ${maxPhotos} evidence photos. Remove a photo or select fewer files.`)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    const selectedFiles = Array.from(files)
+    if (selectedFiles.some((file) => !ALLOWED_IMAGE_TYPES.has(file.type))) {
+      setError("Please select a supported image file (JPEG, PNG, WebP, GIF, AVIF, HEIC, or HEIF).")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    setIsReadingFiles(true)
+    try {
+      const photos = await Promise.all(
+        selectedFiles.map(async (file) => ({
+          dataUrl: await resizeImageFile(file),
+          source: "FILE_UPLOAD" as const,
+        })),
+      )
+      onChange([...value, ...photos])
+    } catch {
+      setError("One or more selected photos could not be read. Please try another image file.")
+    } finally {
+      setIsReadingFiles(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
   }
 
   function removePhoto(index: number) {
@@ -94,7 +143,7 @@ export function MultiCameraCapture({
         {!isStreaming ? (
           <Button type="button" onClick={() => void startCamera()} disabled={atLimit}>
             <Camera className="size-4" />
-            {atLimit ? "Limit Reached" : "Turn On Camera"}
+            {value.length >= maxPhotos ? "Limit Reached" : "Turn On Camera"}
           </Button>
         ) : (
           <>
@@ -108,6 +157,20 @@ export function MultiCameraCapture({
             </Button>
           </>
         )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif"
+          multiple
+          className="sr-only"
+          onChange={(event) => void addFiles(event.target.files)}
+          aria-label="Choose evidence photos from your gallery or files"
+          tabIndex={-1}
+        />
+        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={atLimit}>
+          <Upload className="size-4" />
+          {isReadingFiles ? "Adding Photos..." : "Add from Gallery or Files"}
+        </Button>
       </div>
 
       {value.length > 0 ? (
@@ -115,7 +178,10 @@ export function MultiCameraCapture({
           {value.map((photo, i) => (
             <div key={i} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt={`Evidence ${i + 1}`} className="h-full w-full object-cover" />
+              <img src={photo.dataUrl} alt={`Evidence ${i + 1}`} className="h-full w-full object-cover" />
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                {photo.source === "FILE_UPLOAD" ? "Uploaded" : "Camera"}
+              </span>
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
@@ -130,7 +196,7 @@ export function MultiCameraCapture({
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        {helperText} {value.length}/{maxPhotos} photos captured.
+        {helperText} {value.length}/{maxPhotos} photos added.
       </p>
     </div>
   )

@@ -19,6 +19,7 @@ import { ResidentPickerField, type ResidentPickerValue } from "@/components/shar
 import { INCIDENT_CATEGORIES } from "@/data/complaints"
 import { useSubmitComplaint } from "@/lib/api/hooks/use-complaints"
 import { ApiError } from "@/lib/api/types"
+import type { EvidencePhoto } from "@/types"
 
 const incidentSchema = z
   .object({
@@ -43,7 +44,7 @@ type IncidentValues = z.infer<typeof incidentSchema>
 export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const submitComplaint = useSubmitComplaint()
   const [reporterPhoto, setReporterPhoto] = React.useState("")
-  const [evidence, setEvidence] = React.useState<string[]>([])
+  const [evidence, setEvidence] = React.useState<EvidencePhoto[]>([])
   const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
   const [selectedResident, setSelectedResident] = React.useState<ResidentPickerValue | null>(null)
   const [formError, setFormError] = React.useState<string | null>(null)
@@ -99,7 +100,7 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
       const complaint = await submitComplaint.mutateAsync({
         values: { ...values, reporterName: selectedResident.fullName, residentId: selectedResident.id, captchaToken },
         reporterPhotoDataUrl: reporterPhoto,
-        evidenceDataUrls: evidence,
+        evidencePhotos: evidence,
       })
       setReferenceNumber(complaint.referenceNumber)
       setPhase("success")
@@ -165,7 +166,7 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <h2 className="font-heading text-base font-bold text-foreground">2. Evidence (optional)</h2>
-                      <p className="text-sm text-muted-foreground">Capture live photos of the incident. Gallery uploads are not accepted for this field.</p>
+                      <p className="text-sm text-muted-foreground">Capture incident photos now or add evidence you already have from your gallery or files.</p>
                     </div>
                     <MultiCameraCapture value={evidence} onChange={setEvidence} />
                   </div>

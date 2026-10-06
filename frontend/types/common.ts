@@ -20,6 +20,11 @@ export interface UploadedFile {
   rawFile?: File
 }
 
+export interface EvidencePhoto {
+  dataUrl: string
+  source: "LIVE_CAMERA" | "FILE_UPLOAD"
+}
+
 export interface TimelineEvent {
   id: string
   label: string
