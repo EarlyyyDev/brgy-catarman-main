@@ -54,8 +54,9 @@ async function trackByReference(referenceNumber: string) {
 }
 
 async function submit(input: ComplaintInput, req: Request) {
-  await verifyRecaptchaToken(input.captchaToken, req.ip);
-  const resident = await prisma.resident.findFirst({ where: { id: input.residentId, deletedAt: null } });
+  const { captchaToken, residentId, ...complaintInput } = input;
+  await verifyRecaptchaToken(captchaToken, req.ip);
+  const resident = await prisma.resident.findFirst({ where: { id: residentId, deletedAt: null } });
   if (!resident) {
     throw ApiError.badRequest("We couldn't find that resident record. Please select your name from the list.");
   }
@@ -64,9 +65,10 @@ async function submit(input: ComplaintInput, req: Request) {
     .join(" ");
 
   const complaint = await complaintRepository.create({
-    ...input,
+    ...complaintInput,
+    resident: { connect: { id: resident.id } },
     reporterName,
-    incidentDate: new Date(input.incidentDate),
+    incidentDate: new Date(complaintInput.incidentDate),
     isConfidential: true,
     status: "NEW",
   });

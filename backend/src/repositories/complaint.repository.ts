@@ -59,7 +59,7 @@ export const complaintRepository = {
     return prisma.complaint.count({ where: { deletedAt: null } });
   },
 
-  async create(data: Omit<Prisma.ComplaintUncheckedCreateInput, "referenceNumber">) {
+  async create(data: Omit<Prisma.ComplaintCreateInput, "referenceNumber">) {
     return prisma.$transaction(async (tx) => {
       const referenceNumber = await generateReferenceNumber(tx, "INC", 5);
       const complaint = await tx.complaint.create({ data: { ...data, referenceNumber } });
