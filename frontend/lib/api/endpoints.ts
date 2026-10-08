@@ -1,4 +1,4 @@
-import { apiFetch, apiUpload, buildQueryString } from "./client"
+import { apiFetch, apiUpload, buildQueryString, type UploadProgress } from "./client"
 import type { ListParams, PaginatedResult } from "./types"
 
 // ─────────────────────────── AUTH ───────────────────────────
@@ -146,11 +146,11 @@ export const certificateRequestsApi = {
   delete: (id: string) => apiFetch(`/certificate-requests/${id}`, { method: "DELETE" }),
   // Public/anonymous
   submitPublic: (body: unknown) => apiFetch("/public/certificate-requests", { method: "POST", body }),
-  uploadRequirementPublic: (id: string, file: File, name: string) => {
+  uploadRequirementPublic: (id: string, file: File, name: string, onProgress?: (progress: UploadProgress) => void) => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("name", name)
-    return apiUpload(`/public/certificate-requests/${id}/requirements`, formData)
+    return apiUpload(`/public/certificate-requests/${id}/requirements`, formData, {}, onProgress)
   },
   track: (referenceNumber: string) => apiFetch(`/public/certificate-requests/track/${referenceNumber}`),
 }
@@ -164,7 +164,8 @@ export const complaintsApi = {
   addPhoto: (id: string, formData: FormData) => apiUpload(`/complaints/${id}/photos`, formData),
   // Public/anonymous
   submitPublic: (body: unknown) => apiFetch("/public/complaints", { method: "POST", body }),
-  addPhotoPublic: (id: string, formData: FormData) => apiUpload(`/public/complaints/${id}/photos`, formData),
+  addPhotoPublic: (id: string, formData: FormData, onProgress?: (progress: UploadProgress) => void) =>
+    apiUpload(`/public/complaints/${id}/photos`, formData, {}, onProgress),
   track: (referenceNumber: string) => apiFetch(`/public/complaints/track/${referenceNumber}`),
 }
 
@@ -202,10 +203,10 @@ export const announcementsApi = {
   togglePin: (id: string) => apiFetch(`/announcements/${id}/pin`, { method: "PATCH" }),
   delete: (id: string) => apiFetch(`/announcements/${id}`, { method: "DELETE" }),
   deleteComment: (commentId: string) => apiFetch(`/announcements/comments/${commentId}`, { method: "DELETE" }),
-  uploadAttachment: (id: string, file: File) => {
+  uploadAttachment: (id: string, file: File, onProgress?: (progress: UploadProgress) => void) => {
     const formData = new FormData()
     formData.append("file", file)
-    return apiUpload(`/announcements/${id}/attachments`, formData)
+    return apiUpload(`/announcements/${id}/attachments`, formData, {}, onProgress)
   },
   addComment: (id: string, body: unknown) => apiFetch(`/announcements/${id}/comments`, { method: "POST", body }),
   addReply: (commentId: string, body: unknown) =>

@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { FileDropzone } from "@/components/shared/file-dropzone"
 import { RecaptchaCheckbox } from "@/components/shared/recaptcha-checkbox"
 import { ResidentPickerField, type ResidentPickerValue } from "@/components/shared/resident-picker-field"
+import { SubmissionStatus, type SubmissionStatusValue } from "@/components/shared/submission-status"
 import { DOCUMENT_TYPES } from "@/data/certificates"
 import { useSubmitPublicCertificateRequest } from "@/lib/api/hooks/use-certificate-requests"
 import { usePublicDocumentTypes } from "@/lib/api/hooks/use-document-types"
@@ -56,6 +57,7 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
   const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
   const [selectedResident, setSelectedResident] = React.useState<ResidentPickerValue | null>(null)
   const [requirementsError, setRequirementsError] = React.useState<string | null>(null)
+  const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatusValue | null>(null)
   const [phase, setPhase] = React.useState<"form" | "success">("form")
   const [referenceNumber, setReferenceNumber] = React.useState("")
   const [submittedDocumentTypes, setSubmittedDocumentTypes] = React.useState<DocumentType[]>([])
@@ -90,6 +92,7 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
       setCaptchaToken(null)
       setSelectedResident(null)
       setRequirementsError(null)
+      setSubmissionStatus(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -125,11 +128,13 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
         requirements,
         authorizationLetter: isRepresentative ? authorizationLetter[0] : undefined,
         documentTypes,
+        onProgress: (message, progress) => setSubmissionStatus({ message, progress }),
       })
       setReferenceNumber(batch.referenceNumber)
       setSubmittedDocumentTypes(values.documentTypes)
       setPhase("success")
     } catch (err) {
+      setSubmissionStatus(null)
       setRequirementsError(err instanceof ApiError ? err.message : "Unable to submit your request. Please try again.")
     }
   }
@@ -145,7 +150,9 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!form.formState.isSubmitting) onOpenChange(nextOpen)
+    }}>
       <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto">
         {phase === "success" ? (
           <>
@@ -397,9 +404,11 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
 
                 {requirementsError ? <p className="text-sm font-medium text-destructive">{requirementsError}</p> : null}
 
+                {submissionStatus ? <SubmissionStatus status={submissionStatus} /> : null}
+
                 <Button type="submit" size="lg" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                   <ClipboardCheck className="size-4" />
-                  Submit Request
+                  {form.formState.isSubmitting ? "Submitting request..." : "Submit Request"}
                 </Button>
               </form>
             </Form>

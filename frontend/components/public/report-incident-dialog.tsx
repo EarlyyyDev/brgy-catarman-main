@@ -16,6 +16,7 @@ import { CameraCapture } from "@/components/shared/camera-capture"
 import { MultiCameraCapture } from "@/components/shared/multi-camera-capture"
 import { RecaptchaCheckbox } from "@/components/shared/recaptcha-checkbox"
 import { ResidentPickerField, type ResidentPickerValue } from "@/components/shared/resident-picker-field"
+import { SubmissionStatus, type SubmissionStatusValue } from "@/components/shared/submission-status"
 import { INCIDENT_CATEGORIES } from "@/data/complaints"
 import { useSubmitComplaint } from "@/lib/api/hooks/use-complaints"
 import { ApiError } from "@/lib/api/types"
@@ -48,6 +49,7 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
   const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
   const [selectedResident, setSelectedResident] = React.useState<ResidentPickerValue | null>(null)
   const [formError, setFormError] = React.useState<string | null>(null)
+  const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatusValue | null>(null)
   const [phase, setPhase] = React.useState<"form" | "success">("form")
   const [referenceNumber, setReferenceNumber] = React.useState("")
 
@@ -77,6 +79,7 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
       setCaptchaToken(null)
       setSelectedResident(null)
       setFormError(null)
+      setSubmissionStatus(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -101,10 +104,12 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
         values: { ...values, reporterName: selectedResident.fullName, residentId: selectedResident.id, captchaToken },
         reporterPhotoDataUrl: reporterPhoto,
         evidencePhotos: evidence,
+        onProgress: (message, progress) => setSubmissionStatus({ message, progress }),
       })
       setReferenceNumber(complaint.referenceNumber)
       setPhase("success")
     } catch (err) {
+      setSubmissionStatus(null)
       setFormError(err instanceof ApiError ? err.message : "Unable to submit your report. Please try again.")
     }
   }
@@ -115,7 +120,9 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!form.formState.isSubmitting) onOpenChange(nextOpen)
+    }}>
       <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto">
         {phase === "success" ? (
           <>
@@ -339,9 +346,11 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
 
                 {formError ? <p className="text-sm font-medium text-destructive">{formError}</p> : null}
 
+                {submissionStatus ? <SubmissionStatus status={submissionStatus} /> : null}
+
                 <Button type="submit" size="lg" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                   <ShieldAlert className="size-4" />
-                  Submit Report
+                  {form.formState.isSubmitting ? "Submitting report..." : "Submit Report"}
                 </Button>
               </form>
             </Form>

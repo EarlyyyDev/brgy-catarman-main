@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { RichTextEditor } from "@/components/shared/rich-text-editor"
 import { FileDropzone } from "@/components/shared/file-dropzone"
+import { SubmissionStatus, type SubmissionStatusValue } from "@/components/shared/submission-status"
 import { useAddAnnouncement, useUpdateAnnouncement } from "@/lib/api/hooks/use-announcements"
 import { isVideoUrl } from "@/lib/media-url"
 import { ApiError } from "@/lib/api/types"
@@ -50,6 +51,7 @@ export function AnnouncementFormDialog({
   const [content, setContent] = React.useState("")
   const [media, setMedia] = React.useState<UploadedFile[]>([])
   const [attachmentFiles, setAttachmentFiles] = React.useState<UploadedFile[]>([])
+  const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatusValue | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(announcementSchema),
@@ -92,6 +94,7 @@ export function AnnouncementFormDialog({
       setAttachmentFiles(
         (announcement?.attachments ?? []).map((a) => ({ id: a.id, name: a.name, url: a.url, sizeKb: a.sizeKb, mimeType: a.mimeType, uploadedAt: "" }))
       )
+      setSubmissionStatus(null)
     }
   }, [open, announcement, form])
 
@@ -109,27 +112,42 @@ export function AnnouncementFormDialog({
 
     try {
       if (announcement) {
-        await updateAnnouncement.mutateAsync({ id: announcement.id, values: payload, media, attachments: attachmentFiles })
+        await updateAnnouncement.mutateAsync({
+          id: announcement.id,
+          values: payload,
+          media,
+          attachments: attachmentFiles,
+          onProgress: (message, progress) => setSubmissionStatus({ message, progress }),
+        })
       } else {
-        await addAnnouncement.mutateAsync({ values: payload, media, attachments: attachmentFiles })
+        await addAnnouncement.mutateAsync({
+          values: payload,
+          media,
+          attachments: attachmentFiles,
+          onProgress: (message, progress) => setSubmissionStatus({ message, progress }),
+        })
       }
       onOpenChange(false)
     } catch (err) {
+      setSubmissionStatus(null)
       toast.error(err instanceof ApiError ? err.message : "Unable to save announcement.")
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!form.formState.isSubmitting) onOpenChange(nextOpen)
+    }}>
       <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>{announcement ? "Edit Announcement" : "Create Announcement"}</DialogTitle>
           <DialogDescription>Share updates, advisories, and events with the community.</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-10rem)] px-6">
+        <ScrollArea className="max-h-[calc(90vh-13rem)] px-6">
           <Form {...form}>
             <form id="announcement-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pb-4">
+              {submissionStatus ? <SubmissionStatus status={submissionStatus} /> : null}
               <FormField
                 control={form.control}
                 name="title"
@@ -250,11 +268,11 @@ export function AnnouncementFormDialog({
         </ScrollArea>
 
         <DialogFooter className="border-t border-border px-6 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" disabled={form.formState.isSubmitting} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" form="announcement-form">
-            {announcement ? "Save Changes" : "Publish Announcement"}
+          <Button type="submit" form="announcement-form" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Saving..." : announcement ? "Save Changes" : "Publish Announcement"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,6 +5,7 @@ import { qk } from "@/lib/api/query-keys"
 import { useApiMutation } from "@/lib/api/mutation-helpers"
 import { toAnnouncementPayload, fromAnnouncementDto } from "@/lib/api/adapters/announcement.adapter"
 import { dataUrlToFile } from "@/lib/api/adapters/file.adapter"
+import type { UploadProgress } from "@/lib/api/client"
 import type { PaginatedResult } from "@/lib/api/types"
 import type { Announcement, AnnouncementFormValues, UploadedFile } from "@/types"
 
@@ -51,8 +52,8 @@ export function usePublicAnnouncement(id: string | undefined) {
 
 /** Uploads every not-yet-real (data: URL) file in `media`/`attachments`, then
  * PATCHes the announcement with the complete attachment list (already-real
- * URLs are kept as-is) — the upload endpoint only writes the file to disk and
- * returns its URL, the announcement's own create/update call is what
+ * URLs are kept as-is) — the upload endpoint stores the file and returns its
+ * URL, the announcement's own create/update call is what
  * actually persists AnnouncementAttachment rows. */
 interface FileLike {
   name: string
@@ -62,12 +63,12 @@ interface FileLike {
   rawFile?: File
 }
 
-async function uploadIfLocal(id: string, file: FileLike) {
+async function uploadIfLocal(id: string, file: FileLike, onProgress?: (progress: UploadProgress) => void) {
   // rawFile (videos) uploads the original File directly -- never round-trip
   // a large file through a base64 string. Small images still arrive as a
   // data: URL from FileDropzone's in-browser compression step.
   if (file.rawFile) {
-    return (await announcementsApi.uploadAttachment(id, file.rawFile)) as {
+    return (await announcementsApi.uploadAttachment(id, file.rawFile, onProgress)) as {
       name: string
       url: string
       mimeType: string
@@ -75,7 +76,7 @@ async function uploadIfLocal(id: string, file: FileLike) {
     }
   }
   if (file.url.startsWith("data:")) {
-    return (await announcementsApi.uploadAttachment(id, dataUrlToFile(file.url, file.name))) as {
+    return (await announcementsApi.uploadAttachment(id, dataUrlToFile(file.url, file.name), onProgress)) as {
       name: string
       url: string
       mimeType: string
@@ -85,38 +86,56 @@ async function uploadIfLocal(id: string, file: FileLike) {
   return null
 }
 
-async function syncAttachments(id: string, media: FileLike[], attachments: FileLike[]) {
+async function syncAttachments(
+  id: string,
+  media: FileLike[],
+  attachments: FileLike[],
+  onProgress?: (message: string, progress?: number) => void,
+) {
   const finalAttachments: { name: string; url: string; mimeType: string; sizeKb: number; isMedia: boolean }[] = []
+  const files = [...media.map((file) => ({ file, isMedia: true })), ...attachments.map((file) => ({ file, isMedia: false }))]
+  const uploads = files.filter(({ file }) => Boolean(file.rawFile || file.url.startsWith("data:")))
+  let uploadIndex = 0
 
-  for (const file of media) {
-    const uploaded = await uploadIfLocal(id, file)
-    if (uploaded) {
-      finalAttachments.push({ ...uploaded, isMedia: true })
-    } else {
-      finalAttachments.push({ name: file.name, url: file.url, mimeType: file.mimeType, sizeKb: file.sizeKb, isMedia: true })
+  for (const { file, isMedia } of files) {
+    let uploaded: Awaited<ReturnType<typeof uploadIfLocal>> = null
+    if (file.rawFile || file.url.startsWith("data:")) {
+      uploadIndex += 1
+      onProgress?.(`Uploading file ${uploadIndex} of ${uploads.length}...`)
+      uploaded = await uploadIfLocal(id, file, ({ percent }) =>
+        onProgress?.(`Sending file ${uploadIndex} of ${uploads.length}...`, percent),
+      )
     }
-  }
-  for (const file of attachments) {
-    const uploaded = await uploadIfLocal(id, file)
     if (uploaded) {
-      finalAttachments.push({ ...uploaded, isMedia: false })
+      finalAttachments.push({ ...uploaded, isMedia })
     } else {
-      finalAttachments.push({ name: file.name, url: file.url, mimeType: file.mimeType, sizeKb: file.sizeKb, isMedia: false })
+      finalAttachments.push({ name: file.name, url: file.url, mimeType: file.mimeType, sizeKb: file.sizeKb, isMedia })
     }
   }
 
   if (finalAttachments.length > 0 || media.length > 0 || attachments.length > 0) {
     const imageUrl = finalAttachments.find((a) => a.isMedia)?.url
+    onProgress?.("Saving announcement details...")
     return fromAnnouncementDto((await announcementsApi.update(id, { attachments: finalAttachments, imageUrl })) as never)
   }
   return undefined
 }
 
 export function useAddAnnouncement() {
-  return useApiMutation<Announcement, { values: AnnouncementFormValues; media?: UploadedFile[]; attachments?: UploadedFile[] }>({
-    mutationFn: async ({ values, media, attachments }) => {
+  return useApiMutation<
+    Announcement,
+    {
+      values: AnnouncementFormValues
+      media?: UploadedFile[]
+      attachments?: UploadedFile[]
+      onProgress?: (message: string, progress?: number) => void
+    }
+  >({
+    mutationFn: async ({ values, media, attachments, onProgress }) => {
+      onProgress?.("Creating your announcement...")
       const created = fromAnnouncementDto((await announcementsApi.create(toAnnouncementPayload(values))) as never)
-      const synced = await syncAttachments(created.id, media ?? [], attachments ?? [])
+      onProgress?.("Preparing announcement files...")
+      const synced = await syncAttachments(created.id, media ?? [], attachments ?? [], onProgress)
       return synced ?? created
     },
     invalidates: [qk.announcements.all],
@@ -128,11 +147,19 @@ export function useUpdateAnnouncement() {
   const queryClient = useQueryClient()
   return useApiMutation<
     Announcement,
-    { id: string; values: AnnouncementFormValues; media?: UploadedFile[]; attachments?: UploadedFile[] }
+    {
+      id: string
+      values: AnnouncementFormValues
+      media?: UploadedFile[]
+      attachments?: UploadedFile[]
+      onProgress?: (message: string, progress?: number) => void
+    }
   >({
-    mutationFn: async ({ id, values, media, attachments }) => {
+    mutationFn: async ({ id, values, media, attachments, onProgress }) => {
+      onProgress?.("Saving announcement changes...")
       await announcementsApi.update(id, toAnnouncementPayload(values))
-      const synced = await syncAttachments(id, media ?? [], attachments ?? [])
+      onProgress?.("Preparing announcement files...")
+      const synced = await syncAttachments(id, media ?? [], attachments ?? [], onProgress)
       return synced ?? fromAnnouncementDto((await announcementsApi.get(id)) as never)
     },
     successMessage: "Announcement updated successfully.",

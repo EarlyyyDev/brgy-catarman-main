@@ -10,6 +10,7 @@ import {
   certificateStatusToBackend,
 } from "@/lib/api/adapters/certificateRequest.adapter"
 import { dataUrlToFile } from "@/lib/api/adapters/file.adapter"
+import type { UploadProgress } from "@/lib/api/client"
 import type { BackendDocumentType } from "@/lib/api/hooks/use-document-types"
 import type { PaginatedResult } from "@/lib/api/types"
 import type { CertificateRequest, CertificateRequestTrackResult, CertificateStatus, DocumentType, UploadedFile } from "@/types"
@@ -53,22 +54,34 @@ export function useSubmitPublicCertificateRequest() {
       requirements: UploadedFile[]
       authorizationLetter?: UploadedFile
       documentTypes: BackendDocumentType[]
+      onProgress?: (message: string, progress?: number) => void
     }
   >({
-    mutationFn: async ({ values, requirements, authorizationLetter, documentTypes }) => {
+    mutationFn: async ({ values, requirements, authorizationLetter, documentTypes, onProgress }) => {
+      onProgress?.("Verifying your details and creating your request...")
       const batch = fromCertificateRequestBatchDto(
         (await certificateRequestsApi.submitPublic(toPublicBatchRequestPayload(values, documentTypes))) as never,
       )
       // Requirement files apply to every requested document in the batch --
       // each is its own CertificateRequest staff review independently.
+      const files = authorizationLetter
+        ? [...requirements, { ...authorizationLetter, name: `Authorization Letter — ${authorizationLetter.name}` }]
+        : requirements
+      const totalUploads = batch.requests.length * files.length
+      let uploadIndex = 0
       for (const request of batch.requests) {
-        const requestRequirements = authorizationLetter
-          ? [...requirements, { ...authorizationLetter, name: `Authorization Letter — ${authorizationLetter.name}` }]
-          : requirements
-        for (const file of requestRequirements) {
-          await certificateRequestsApi.uploadRequirementPublic(request.id, dataUrlToFile(file.url, file.name), file.name)
+        for (const file of files) {
+          uploadIndex += 1
+          onProgress?.(`Uploading requirement ${uploadIndex} of ${totalUploads}...`)
+          await certificateRequestsApi.uploadRequirementPublic(
+            request.id,
+            dataUrlToFile(file.url, file.name),
+            file.name,
+            ({ percent }: UploadProgress) => onProgress?.(`Sending requirement ${uploadIndex} of ${totalUploads}...`, percent),
+          )
         }
       }
+      onProgress?.("Finishing your request and preparing its reference number...")
       return batch
     },
     showErrorToast: false,

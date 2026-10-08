@@ -17,6 +17,9 @@ interface BackendAnnouncementDetail {
   comments: Parameters<typeof fromBackendComment>[0][]
 }
 
+type BackendComment = Parameters<typeof fromBackendComment>[0]
+const EMPTY_REACTION_COUNTS: Record<string, number> = {}
+
 /**
  * @param isStaffContext Pass true only when rendered inside the staff/admin
  * dashboard. The app has one shared login session with no per-portal scoping,
@@ -29,9 +32,10 @@ export function useAnnouncementEngagement(announcement: Announcement, isStaffCon
   const { data: session } = useMe()
   const effectiveSession = isStaffContext ? session : null
   const queryClient = useQueryClient()
+  const detailKey = [...qk.announcements.publicDetail(announcement.id), viewerKey, isStaffContext]
 
   const detailQuery = useQuery<BackendAnnouncementDetail>({
-    queryKey: [...qk.announcements.publicDetail(announcement.id), viewerKey, isStaffContext],
+    queryKey: detailKey,
     queryFn: () =>
       (isStaffContext
         ? announcementsApi.get(announcement.id, viewerKey)
@@ -39,7 +43,7 @@ export function useAnnouncementEngagement(announcement: Announcement, isStaffCon
     enabled: Boolean(viewerKey),
   })
 
-  const reactionCounts = detailQuery.data?.reactionCounts ?? {}
+  const reactionCounts = detailQuery.data?.reactionCounts ?? EMPTY_REACTION_COUNTS
   const likeCount = Object.values(reactionCounts).reduce((a, b) => a + b, 0)
   // Only the reaction types that actually have a count > 0, ranked by count
   // -- used to render the stacked reaction-summary bubbles, which must never
@@ -68,29 +72,80 @@ export function useAnnouncementEngagement(announcement: Announcement, isStaffCon
     queryClient.invalidateQueries({ queryKey: qk.announcements.detail(announcement.id) })
   }
 
-  const setReactionMutation = useApiMutation<unknown, { reaction: string | null }>({
+  const setReactionMutation = useApiMutation<
+    unknown,
+    { reaction: string | null },
+    { previous: BackendAnnouncementDetail | undefined }
+  >({
     mutationFn: ({ reaction: r }) =>
       isStaffContext
         ? announcementsApi.setPostReaction(announcement.id, { reaction: r })
         : announcementsApi.setPostReactionPublic(announcement.id, { reaction: r, viewerKey }),
     showErrorToast: false,
-    onSuccess: invalidate,
+    onMutate: async ({ reaction: nextReaction }) => {
+      await queryClient.cancelQueries({ queryKey: detailKey })
+      const previous = queryClient.getQueryData<BackendAnnouncementDetail>(detailKey)
+      queryClient.setQueryData<BackendAnnouncementDetail>(detailKey, (current) => {
+        if (!current) return current
+        const counts = { ...current.reactionCounts }
+        const previousReaction = current.myReaction ?? null
+        if (previousReaction) {
+          counts[previousReaction] = Math.max(0, (counts[previousReaction] ?? 0) - 1)
+          if (counts[previousReaction] === 0) delete counts[previousReaction]
+        }
+        if (nextReaction) counts[nextReaction] = (counts[nextReaction] ?? 0) + 1
+        return { ...current, reactionCounts: counts, myReaction: nextReaction }
+      })
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(detailKey, context.previous)
+    },
+    onSettled: invalidate,
   })
 
-  const addCommentMutation = useApiMutation<unknown, { text: string }>({
+  const addCommentMutation = useApiMutation<
+    unknown,
+    { text: string },
+    { previous: BackendAnnouncementDetail | undefined }
+  >({
     mutationFn: ({ text }) =>
       isStaffContext
         ? announcementsApi.addComment(announcement.id, { text })
         : announcementsApi.addCommentPublic(announcement.id, { text, authorName: viewerName, viewerKey }),
     showErrorToast: false,
-    onSuccess: invalidate,
+    onMutate: async ({ text }) => {
+      await queryClient.cancelQueries({ queryKey: detailKey })
+      const previous = queryClient.getQueryData<BackendAnnouncementDetail>(detailKey)
+      const optimisticComment: BackendComment = {
+        id: `optimistic-${crypto.randomUUID()}`,
+        text,
+        authorName: viewerName,
+        createdAt: new Date().toISOString(),
+        viewerKey: isStaffContext ? undefined : viewerKey,
+        authorId: effectiveSession?.id,
+        replies: [],
+        reactionCounts: {},
+        myReaction: null,
+      }
+      queryClient.setQueryData<BackendAnnouncementDetail>(detailKey, (current) =>
+        current ? { ...current, comments: [...(current.comments ?? []), optimisticComment] } : current,
+      )
+      return { previous }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(detailKey, context.previous)
+    },
+    onSettled: invalidate,
   })
 
   function pickReaction(key: ReactionKey) {
+    if (setReactionMutation.isPending) return
     setReactionMutation.mutate({ reaction: reaction === key ? null : reactionToBackend(key) })
   }
 
   function addComment(text: string) {
+    if (addCommentMutation.isPending) return
     addCommentMutation.mutate({ text })
   }
 

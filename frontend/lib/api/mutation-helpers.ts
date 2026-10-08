@@ -2,7 +2,10 @@ import { useMutation, useQueryClient, type QueryKey, type UseMutationOptions } f
 import toast from "react-hot-toast"
 import { ApiError } from "./types"
 
-interface UseApiMutationOptions<TData, TVariables> extends Omit<UseMutationOptions<TData, ApiError, TVariables>, "mutationFn"> {
+interface UseApiMutationOptions<TData, TVariables, TOnMutateResult> extends Omit<
+  UseMutationOptions<TData, ApiError, TVariables, TOnMutateResult>,
+  "mutationFn"
+> {
   mutationFn: (variables: TVariables) => Promise<TData>
   /** Query keys to invalidate on success. Can depend on the mutation result/variables. */
   invalidates?: QueryKey[] | ((data: TData, variables: TVariables) => QueryKey[])
@@ -12,7 +15,7 @@ interface UseApiMutationOptions<TData, TVariables> extends Omit<UseMutationOptio
   showErrorToast?: boolean
 }
 
-export function useApiMutation<TData, TVariables = void>({
+export function useApiMutation<TData, TVariables = void, TOnMutateResult = unknown>({
   mutationFn,
   invalidates,
   successMessage,
@@ -20,10 +23,10 @@ export function useApiMutation<TData, TVariables = void>({
   onSuccess,
   onError,
   ...options
-}: UseApiMutationOptions<TData, TVariables>) {
+}: UseApiMutationOptions<TData, TVariables, TOnMutateResult>) {
   const queryClient = useQueryClient()
 
-  return useMutation<TData, ApiError, TVariables>({
+  return useMutation<TData, ApiError, TVariables, TOnMutateResult>({
     mutationFn,
     onSuccess: (data, variables, onMutateResult, context) => {
       const keys = typeof invalidates === "function" ? invalidates(data, variables) : invalidates
