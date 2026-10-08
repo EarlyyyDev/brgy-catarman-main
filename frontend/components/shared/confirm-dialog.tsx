@@ -3,7 +3,6 @@
 import * as React from "react"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -12,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { LoaderCircle } from "lucide-react"
 
 interface ConfirmDialogProps {
   open: boolean
@@ -35,31 +35,41 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (open) setError(null)
+  }, [open])
 
   async function handleConfirm() {
     setLoading(true)
+    setError(null)
     try {
       await onConfirm()
       onOpenChange(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The action could not be completed. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={(nextOpen) => {
+      if (!loading) onOpenChange(nextOpen)
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {error ? <p role="alert" className="text-sm font-medium text-destructive">{error}</p> : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button variant={destructive ? "destructive" : "default"} onClick={handleConfirm} disabled={loading}>
-              {loading ? "Please wait..." : confirmLabel}
-            </Button>
-          </AlertDialogAction>
+          <Button variant={destructive ? "destructive" : "default"} onClick={handleConfirm} disabled={loading}>
+            {loading ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {loading ? "Please wait..." : confirmLabel}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

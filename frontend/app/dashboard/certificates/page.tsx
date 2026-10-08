@@ -8,9 +8,9 @@ import {
   Check,
   Eye,
   FileCheck,
-  FileClock,
   FilePlus2,
-  IdCard,
+  FileText,
+  Play,
   Printer,
   Trash2,
   UserRoundCheck,
@@ -105,16 +105,20 @@ export default function CertificatesPage() {
           const request = row.original
           const actions: RowAction[] = []
 
-          actions.push({ label: "See Requirements", icon: IdCard, onClick: () => setRequirementsRequest(request) })
+          actions.push({
+            label: "Certificate Template",
+            icon: FileText,
+            onClick: () => router.push("/dashboard/certificate-templates"),
+          })
 
           if (request.status === "Pending") {
-            actions.push({ label: "Start Review", icon: FileClock, onClick: () => setActionState({ action: "review", request }) })
-          }
-          if (request.status === "Pending" || request.status === "Processing") {
             actions.push({ label: "Approve", icon: Check, onClick: () => setActionState({ action: "approve", request }) })
             actions.push({ label: "Reject", icon: XCircle, destructive: true, onClick: () => setActionState({ action: "reject", request }) })
           }
           if (request.status === "Approved") {
+            actions.push({ label: "Start Process", icon: Play, onClick: () => setActionState({ action: "process", request }) })
+          }
+          if (request.status === "Processing") {
             actions.push({ label: "Mark Ready for Claim", icon: FileCheck, onClick: () => setActionState({ action: "ready", request }) })
           }
           if (request.status === "Ready for Claim") {
@@ -136,7 +140,7 @@ export default function CertificatesPage() {
 
           return (
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="size-8" onClick={() => router.push(`/dashboard/certificate-templates?requestId=${request.id}`)}>
+              <Button variant="ghost" size="icon" className="size-8" onClick={() => setRequirementsRequest(request)} aria-label={`View requirements for ${request.requestorName}`}>
                 <Eye className="size-4" />
               </Button>
               <RowActions actions={actions} />
@@ -222,8 +226,8 @@ export default function CertificatesPage() {
         }
         destructive
         confirmLabel="Delete"
-        onConfirm={() => {
-          if (deletingRequest) deleteCertificateRequest.mutate(deletingRequest.id)
+        onConfirm={async () => {
+          if (deletingRequest) await deleteCertificateRequest.mutateAsync(deletingRequest.id)
         }}
       />
     </div>

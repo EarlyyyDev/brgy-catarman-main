@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Archive, Check, Eye, MapPin, ShieldX } from "lucide-react"
+import { Archive, Check, Eye, LoaderCircle, MapPin, ShieldX } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -26,12 +26,21 @@ export function ComplaintDetailDialog({ open, onOpenChange, complaint }: { open:
   if (!complaint) return null
 
   async function handleAction(status: Complaint["status"]) {
-    await updateStatus.mutateAsync({ id: complaint!.id, status, staffNotes: notes || undefined })
-    onOpenChange(false)
+    if (!complaint) return
+    try {
+      await updateStatus.mutateAsync({ id: complaint.id, status, staffNotes: notes || undefined })
+      onOpenChange(false)
+    } catch {
+      // The mutation hook reports the API error; keep the dialog open for retry.
+    }
   }
 
+  const isClosed = complaint.status === "Resolved" || complaint.status === "Dismissed" || complaint.status === "Archived"
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!updateStatus.isPending) onOpenChange(nextOpen)
+    }}>
       <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-8">
@@ -107,7 +116,7 @@ export function ComplaintDetailDialog({ open, onOpenChange, complaint }: { open:
 
         <div>
           <Label>Staff Notes</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add internal notes about this case..." rows={3} className="mt-2" />
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add internal notes about this case..." rows={3} className="mt-2" disabled={isClosed || updateStatus.isPending} />
         </div>
 
         <div>
@@ -117,33 +126,42 @@ export function ComplaintDetailDialog({ open, onOpenChange, complaint }: { open:
 
         <DialogFooter className="flex-wrap gap-2 sm:justify-between">
           <div className="flex flex-wrap gap-2">
-            {complaint.status === "New" ? (
-              <Button variant="outline" onClick={() => handleAction("Under Review")}>
-                Start Review
+            {!isClosed && complaint.status === "New" ? (
+              <Button variant="outline" onClick={() => handleAction("Under Review")} disabled={updateStatus.isPending}>
+                {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {updateStatus.isPending ? "Starting review..." : "Start Review"}
               </Button>
             ) : null}
-            {(complaint.status === "New" || complaint.status === "Under Review") ? (
-              <Button variant="outline" onClick={() => handleAction("Validated")}>
+            {!isClosed && complaint.status === "Under Review" ? (
+              <Button variant="outline" onClick={() => handleAction("Validated")} disabled={updateStatus.isPending}>
+                {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
                 <Check className="size-4" />
                 Validate
               </Button>
             ) : null}
-            {complaint.status !== "Resolved" && complaint.status !== "Dismissed" ? (
-              <Button onClick={() => handleAction("Resolved")}>
+            {!isClosed && (complaint.status === "Under Review" || complaint.status === "Validated") ? (
+              <>
+              <Button onClick={() => handleAction("Resolved")} disabled={updateStatus.isPending}>
+                {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
                 <Check className="size-4" />
                 Resolve
               </Button>
+              <Button variant="outline" onClick={() => handleAction("Dismissed")} disabled={updateStatus.isPending}>
+                {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                <ShieldX className="size-4" />
+                Dismiss
+              </Button>
+              </>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => handleAction("Dismissed")}>
-              <ShieldX className="size-4" />
-              Dismiss
-            </Button>
-            <Button variant="outline" onClick={() => handleAction("Archived")}>
-              <Archive className="size-4" />
-              Archive
-            </Button>
+            {!isClosed && (complaint.status === "Under Review" || complaint.status === "Validated") ? (
+              <Button variant="outline" onClick={() => handleAction("Archived")} disabled={updateStatus.isPending}>
+                {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                <Archive className="size-4" />
+                Archive
+              </Button>
+            ) : null}
           </div>
         </DialogFooter>
       </DialogContent>

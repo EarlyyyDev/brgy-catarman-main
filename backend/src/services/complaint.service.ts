@@ -109,6 +109,19 @@ async function updateStatus(
     throw ApiError.notFound("Complaint not found");
   }
 
+  const allowedTransitions: Record<string, string[]> = {
+    NEW: ["UNDER_REVIEW"],
+    UNDER_REVIEW: ["VALIDATED", "RESOLVED", "DISMISSED", "ARCHIVED"],
+    VALIDATED: ["RESOLVED", "DISMISSED", "ARCHIVED"],
+  };
+  if (!allowedTransitions[existing.status]?.includes(status)) {
+    throw ApiError.conflict(
+      existing.status === "RESOLVED" || existing.status === "DISMISSED" || existing.status === "ARCHIVED"
+        ? "This complaint is closed and its status can no longer be changed."
+        : `Cannot change complaint status from ${existing.status.replace(/_/g, " ")} to ${status.replace(/_/g, " ")}.`,
+    );
+  }
+
   const data: Record<string, unknown> = { status };
   if (staffNotes !== undefined) {
     data.staffNotes = staffNotes;

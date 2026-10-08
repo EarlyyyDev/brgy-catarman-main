@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LoaderCircle } from "lucide-react"
 import { useUpdateCertificateStatus } from "@/lib/api/hooks/use-certificate-requests"
 import type { CertificateRequest, CertificateStatus } from "@/types"
 
-export type CertificateActionType = "review" | "approve" | "reject" | "ready" | "claimed" | "extend"
+export type CertificateActionType = "process" | "approve" | "reject" | "ready" | "claimed" | "extend"
 
 const ACTION_META: Record<CertificateActionType, { title: string; description: string; status?: CertificateStatus; confirmLabel: string; destructive?: boolean }> = {
-  review: { title: "Move to Processing", description: "Mark this request as currently being processed by staff.", status: "Processing", confirmLabel: "Confirm" },
+  process: { title: "Start Processing", description: "Mark this approved request as currently being processed by staff.", status: "Processing", confirmLabel: "Start Process" },
   approve: { title: "Approve Request", description: "Approve this certificate request and generate a control number and claim deadline.", status: "Approved", confirmLabel: "Approve" },
   reject: { title: "Reject Request", description: "Please provide a reason for rejecting this request.", status: "Rejected", confirmLabel: "Reject Request", destructive: true },
   ready: { title: "Mark Ready for Claim", description: "Notify the requestor that their document is ready for pickup.", status: "Ready for Claim", confirmLabel: "Confirm" },
@@ -46,20 +47,26 @@ export function CertificateActionDialog({ open, onOpenChange, action, request }:
 
   async function handleConfirm() {
     if (!request) return
-    if (action === "extend") {
-      await updateStatus.mutateAsync({ id: request.id, status: request.status, extra: { extendDays: Number(extendDays) || 0 } })
-    } else {
-      await updateStatus.mutateAsync({
-        id: request.id,
-        status: meta.status!,
-        extra: { rejectionReason: action === "reject" ? reason : undefined, staffNotes: notes || undefined },
-      })
+    try {
+      if (action === "extend") {
+        await updateStatus.mutateAsync({ id: request.id, status: request.status, extra: { extendDays: Number(extendDays) || 0 } })
+      } else {
+        await updateStatus.mutateAsync({
+          id: request.id,
+          status: meta.status!,
+          extra: { rejectionReason: action === "reject" ? reason : undefined, staffNotes: notes || undefined },
+        })
+      }
+      onOpenChange(false)
+    } catch {
+      // The mutation hook surfaces the API error toast; keep this dialog open for correction/retry.
     }
-    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!updateStatus.isPending) onOpenChange(nextOpen)
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{meta.title}</DialogTitle>
@@ -85,7 +92,7 @@ export function CertificateActionDialog({ open, onOpenChange, action, request }:
           </div>
         ) : null}
 
-        {action === "approve" || action === "review" ? (
+        {action === "approve" ? (
           <div className="space-y-2">
             <Label>Staff Notes (optional)</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add internal notes about this request" rows={3} />
@@ -93,15 +100,16 @@ export function CertificateActionDialog({ open, onOpenChange, action, request }:
         ) : null}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={updateStatus.isPending}>
             Cancel
           </Button>
           <Button
             variant={meta.destructive ? "destructive" : "default"}
             onClick={handleConfirm}
-            disabled={action === "reject" && !reason.trim()}
+            disabled={updateStatus.isPending || (action === "reject" && !reason.trim())}
           >
-            {meta.confirmLabel}
+            {updateStatus.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {updateStatus.isPending ? "Updating..." : meta.confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
