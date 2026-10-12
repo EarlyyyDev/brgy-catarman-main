@@ -40,10 +40,20 @@ export function AnnouncementPostCard({
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = React.useRef(false)
 
   const { likeCount, topReactions, reaction, pickReaction: pickReactionRaw, comments, totalCommentCount, addComment, viewerKey, viewerName, invalidate } =
     useAnnouncementEngagement(announcement, isStaffContext)
   const postedAgo = useRelativeTime(announcement.createdAt)
+
+  React.useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+      if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    },
+    [],
+  )
 
   const isLong = announcement.content.length > announcement.excerpt.length + 20
   const mediaUrls = announcement.mediaUrls ?? []
@@ -55,6 +65,21 @@ export function AnnouncementPostCard({
 
   function scheduleClosePicker() {
     closeTimer.current = setTimeout(() => setPickerOpen(false), 300)
+  }
+
+  function startLongPress(event: React.PointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === "mouse") return
+    longPressTriggered.current = false
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      openPicker()
+    }, 450)
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+    longPressTimer.current = null
   }
 
   function pickReaction(key: ReactionKey) {
@@ -181,7 +206,11 @@ export function AnnouncementPostCard({
       <div className="grid grid-cols-2 gap-1 p-2">
         <div className="relative" onMouseEnter={openPicker} onMouseLeave={scheduleClosePicker}>
           {pickerOpen ? (
-            <div className="absolute bottom-full left-1/2 z-20 mb-1 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-lg">
+            <div
+              className="absolute bottom-full left-1/2 z-20 mb-1 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-lg select-none"
+              onMouseEnter={openPicker}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
               {REACTIONS.map((r) => (
                 <button
                   key={r.key}
@@ -197,9 +226,20 @@ export function AnnouncementPostCard({
           ) : null}
           <button
             type="button"
-            onClick={() => pickReaction("like")}
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            onClick={() => {
+              if (longPressTriggered.current) {
+                longPressTriggered.current = false
+                return
+              }
+              pickReaction("like")
+            }}
+            onContextMenu={(event) => event.preventDefault()}
             className={cn(
-              "flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors hover:bg-secondary",
+              "flex w-full touch-manipulation select-none items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors hover:bg-secondary active:bg-secondary [-webkit-touch-callout:none]",
               reaction ? reactionByKey(reaction).labelColor : "text-muted-foreground"
             )}
           >
