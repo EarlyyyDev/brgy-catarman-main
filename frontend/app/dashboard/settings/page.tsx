@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileDropzone } from "@/components/shared/file-dropzone"
 import { OfficialFormDialog } from "@/components/dashboard/settings/official-form-dialog"
+import { EmergencyContactsSettings } from "@/components/dashboard/settings/emergency-contacts-settings"
 import { MyAccountSettings } from "@/components/dashboard/settings/my-account-settings"
 import { CertificatePricingForm } from "@/components/dashboard/settings/certificate-pricing-form"
 import { useSettings, useUpdateSettings, useUploadSettingsImage } from "@/lib/api/hooks/use-settings"
@@ -244,6 +245,7 @@ function SystemSettingsPage() {
               </form>
             </CardContent>
           </Card>
+          <EmergencyContactsSettings />
         </TabsContent>
 
         <TabsContent value="officials">

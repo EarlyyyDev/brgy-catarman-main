@@ -1,115 +1,92 @@
 "use client"
 
-import * as React from "react"
-import toast from "react-hot-toast"
-import { type ColumnDef } from "@tanstack/react-table"
-import { Clock, Database, Download, HardDriveDownload, RotateCcw, ShieldCheck } from "lucide-react"
+import { AlertTriangle, Cloud, ExternalLink, HardDrive, ShieldCheck } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
-import { StatCard } from "@/components/shared/stat-card"
-import { DataTable } from "@/components/shared/data-table"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { useBackups, useRunManualBackup, useRestoreBackup, backupDownloadUrl } from "@/lib/api/hooks/use-backups"
-import { formatDateTime } from "@/lib/format"
-import type { BackupRecord } from "@/types"
 
 export default function BackupPage() {
-  const { backupRecords } = useBackups()
-  const runManualBackup = useRunManualBackup()
-  const restoreBackup = useRestoreBackup()
-
-  const [autoBackup, setAutoBackup] = React.useState(true)
-  const [restoring, setRestoring] = React.useState<BackupRecord | null>(null)
-
-  const lastBackup = backupRecords[0]
-
-  async function handleManualBackup() {
-    await runManualBackup.mutateAsync()
-  }
-
-  const columns = React.useMemo<ColumnDef<BackupRecord>[]>(
-    () => [
-      { accessorKey: "fileName", header: "File Name", cell: ({ row }) => <span className="font-mono text-xs">{row.original.fileName}</span> },
-      { accessorKey: "type", header: "Type" },
-      { accessorKey: "sizeMb", header: "Size", cell: ({ row }) => `${row.original.sizeMb} MB` },
-      { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-      { accessorKey: "createdBy", header: "Created By" },
-      { id: "createdAt", header: "Date", cell: ({ row }) => formatDateTime(row.original.createdAt) },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="size-8" asChild>
-              <a href={backupDownloadUrl(row.original.id)} download>
-                <Download className="size-4" />
-              </a>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              disabled={row.original.status !== "Completed"}
-              onClick={() => setRestoring(row.original)}
-            >
-              <RotateCcw className="size-4" />
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    []
-  )
-
   return (
     <div className="space-y-6">
-      <PageHeader title="Backup & Restore" description="Manage database backups and disaster recovery." />
+      <PageHeader title="Backup & Recovery" description="Where to protect and recover your system data." />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total Backups" value={backupRecords.length} icon={Database} accent="navy" />
-        <StatCard label="Last Backup" value={lastBackup ? formatDateTime(lastBackup.createdAt) : "—"} icon={Clock} accent="gold" />
-        <StatCard label="Backup Status" value={lastBackup?.status ?? "—"} icon={ShieldCheck} accent={lastBackup?.status === "Completed" ? "success" : "danger"} />
+      <Card className="border-amber-300 bg-amber-50 text-amber-950">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="size-5" />
+            App backups are unavailable on Vercel
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>
+            The old backup buttons saved files on the backend server. Vercel does not keep that server storage permanently, so those
+            buttons cannot provide a dependable backup or restore for the live system. They have been removed to avoid giving a false
+            sense of protection.
+          </p>
+          <p>Use the data services below instead. They protect different things.</p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <HardDrive className="size-4 text-primary" />
+              Database records — Neon
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Neon retains database history for a limited period based on your plan and history-window setting. If data is lost, create
+              a separate branch from before the problem and verify it before considering any production recovery.
+            </p>
+            <a
+              href="https://console.neon.tech/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 font-semibold text-primary hover:underline"
+            >
+              Open Neon Console <ExternalLink className="size-3.5" />
+            </a>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Cloud className="size-4 text-primary" />
+              Uploaded photos and files — Cloudinary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Cloudinary asset backups are configured separately from Neon and this website. In Cloudinary settings, enable automatic
+              backup and run “Back Up Existing Assets” to include files uploaded before you enabled it.
+            </p>
+            <a
+              href="https://console.cloudinary.com/app/settings/backup"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 font-semibold text-primary hover:underline"
+            >
+              Open Cloudinary Backup Settings <ExternalLink className="size-3.5" />
+            </a>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="border-border/70">
         <CardHeader>
-          <CardTitle className="text-sm font-semibold">Backup Actions</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <ShieldCheck className="size-4 text-primary" />
+            Before restoring anything
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Switch checked={autoBackup} onCheckedChange={(checked) => { setAutoBackup(checked); toast.success(`Automatic backup ${checked ? "enabled" : "disabled"}.`) }} />
-            <div>
-              <Label>Automatic Nightly Backup</Label>
-              <p className="text-xs text-muted-foreground">Runs automatically every day at 3:00 AM.</p>
-            </div>
-          </div>
-          <Button onClick={handleManualBackup} disabled={runManualBackup.isPending}>
-            <HardDriveDownload className="size-4" />
-            {runManualBackup.isPending ? "Running Backup..." : "Run Manual Backup Now"}
-          </Button>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Neon recovery covers database records; Cloudinary backup covers original uploaded assets. Neither replaces the other.</p>
+          <p>Restore to a separate Neon branch first, verify the recovered data, and do not point the live site at it until you intend to.</p>
+          <p>Cloudinary’s default backup storage may count toward your Cloudinary storage quota. Review the account usage and plan.</p>
         </CardContent>
       </Card>
-
-      <div>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Backup History</p>
-        <DataTable columns={columns} data={backupRecords} searchPlaceholder="Search backups..." emptyTitle="No backups found" />
-      </div>
-
-      <ConfirmDialog
-        open={!!restoring}
-        onOpenChange={(open) => !open && setRestoring(null)}
-        title="Restore from Backup"
-        description={`This will restore the system to the state captured in "${restoring?.fileName}". Any data created after this backup will be lost. This action cannot be undone.`}
-        destructive
-        confirmLabel="Restore System"
-        onConfirm={() => {
-          if (restoring) restoreBackup.mutate(restoring.id)
-        }}
-      />
     </div>
   )
 }
