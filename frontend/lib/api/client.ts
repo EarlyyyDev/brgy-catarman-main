@@ -144,6 +144,71 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   return parseEnvelope<T>(res)
 }
 
+export async function apiStream(
+  path: string,
+  body: unknown,
+  onChunk: (text: string) => void,
+  isRetry = false,
+): Promise<string> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+
+  if (res.status === 401 && !isRetry && !AUTH_EXEMPT_PATHS.has(path)) {
+    const refreshed = await refreshSession()
+    if (refreshed) return apiStream(path, body, onChunk, true)
+  }
+  if (!res.ok) {
+    await parseEnvelope(res)
+    throw new ApiError(res.status, res.statusText || "Request failed")
+  }
+  if (!res.body) throw new ApiError(0, "The response stream is unavailable. Please try again.")
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let text = ""
+
+  function consumeEvents(events: string[]) {
+    for (const event of events) {
+      const data = event
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("\n")
+      if (!data || data === "[DONE]") continue
+      const chunk = JSON.parse(data) as { text?: string; error?: string }
+      if (chunk.error) throw new ApiError(500, chunk.error)
+      if (chunk.text) {
+        text += chunk.text
+        onChunk(chunk.text)
+      }
+    }
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done })
+      const events = buffer.split(/\r?\n\r?\n/)
+      buffer = events.pop() ?? ""
+      consumeEvents(events)
+      if (done) {
+        if (buffer.trim()) consumeEvents([buffer])
+        break
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (!text) throw new ApiError(500, "The AI assistant didn't return a response. Please try again.")
+  return text
+}
+
 /** Multipart upload variant — omits Content-Type so the browser sets the boundary. */
 export function apiUpload<T>(
   path: string,

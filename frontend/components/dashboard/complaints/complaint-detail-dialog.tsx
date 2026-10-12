@@ -41,7 +41,12 @@ export function ComplaintDetailDialog({ open, onOpenChange, complaint }: { open:
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (!updateStatus.isPending) onOpenChange(nextOpen)
     }}>
-      <DialogContent className="max-h-[90vh] sm:max-w-2xl overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        onPointerDownOutside={(event) => {
+          if (lightboxUrl) event.preventDefault()
+        }}
+      >
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-8">
             <DialogTitle>{complaint.referenceNumber}</DialogTitle>
@@ -102,8 +107,16 @@ export function ComplaintDetailDialog({ open, onOpenChange, complaint }: { open:
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidence</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {complaint.evidenceUrls.map((url, idx) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={idx} src={url} alt={`Evidence ${idx + 1}`} className="aspect-square w-full rounded-lg border border-border object-cover" />
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setLightboxUrl(url)}
+                  className="cursor-zoom-in overflow-hidden rounded-lg border border-border transition-opacity hover:opacity-80"
+                  aria-label={`View full-size evidence photo ${idx + 1}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Evidence ${idx + 1}`} className="aspect-square w-full object-cover" />
+                </button>
               ))}
             </div>
           </div>

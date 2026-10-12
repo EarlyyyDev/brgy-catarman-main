@@ -10,6 +10,24 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function buildContents(message: string, history: ChatTurn[]) {
+  return [
+    ...history.slice(-6).map((turn) => ({
+      role: turn.role === "user" ? "user" : "model",
+      parts: [{ text: turn.text }],
+    })),
+    { role: "user", parts: [{ text: message }] },
+  ];
+}
+
+function geminiRequestBody(message: string, history: ChatTurn[], context: AssistantContext) {
+  return JSON.stringify({
+    contents: buildContents(message, history),
+    systemInstruction: { parts: [{ text: buildSystemInstruction(context) }] },
+    generationConfig: { maxOutputTokens: 400, temperature: 0.4 },
+  });
+}
+
 export interface AssistantOfficial {
   name: string;
   position: string;
@@ -140,20 +158,8 @@ export async function askGemini(message: string, history: ChatTurn[], context: A
     throw ApiError.internal("The AI assistant is not configured yet.");
   }
 
-  const contents = [
-    ...history.slice(-6).map((turn) => ({
-      role: turn.role === "user" ? "user" : "model",
-      parts: [{ text: turn.text }],
-    })),
-    { role: "user", parts: [{ text: message }] },
-  ];
-
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
-  const requestBody = JSON.stringify({
-    contents,
-    systemInstruction: { parts: [{ text: buildSystemInstruction(context) }] },
-    generationConfig: { maxOutputTokens: 700, temperature: 0.4 },
-  });
+  const requestBody = geminiRequestBody(message, history, context);
 
   // Gemini occasionally returns 429/5xx under momentary load ("high demand,
   // try again later") -- a couple of quick retries with backoff resolve most
@@ -190,4 +196,75 @@ export async function askGemini(message: string, history: ChatTurn[], context: A
   throw ApiError.internal(
     "The AI assistant is experiencing high demand right now. Please try again in a moment, or contact the barangay office directly.",
   );
+}
+
+export async function* streamGemini(message: string, history: ChatTurn[], context: AssistantContext): AsyncGenerator<string> {
+  if (!env.GEMINI_API_KEY) {
+    throw ApiError.internal("The AI assistant is not configured yet.");
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
+  let response: Response | undefined;
+  let lastErrorBody = "";
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: geminiRequestBody(message, history, context),
+    });
+    if (response.ok) break;
+
+    lastStatus = response.status;
+    lastErrorBody = await response.text();
+    const canRetry = RETRYABLE_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS - 1;
+    if (!canRetry) break;
+    await sleep(RETRY_DELAYS_MS[attempt]);
+  }
+
+  if (!response?.ok || !response.body) {
+    logger.error("Gemini streaming request failed", { status: lastStatus, body: lastErrorBody.slice(0, 500) });
+    throw ApiError.internal(
+      "The AI assistant is experiencing high demand right now. Please try again in a moment, or contact the barangay office directly.",
+    );
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let hasText = false;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() ?? "";
+      for (const event of events) {
+        const data = event
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim())
+          .join("\n");
+        if (!data || data === "[DONE]") continue;
+        const chunk = JSON.parse(data) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+          error?: { message?: string };
+        };
+        if (chunk.error) {
+          throw ApiError.internal(chunk.error.message ?? "The AI assistant couldn't complete the reply.");
+        }
+        const text = chunk.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+        if (text) {
+          hasText = true;
+          yield text;
+        }
+      }
+      if (done) break;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (!hasText) {
+    throw ApiError.internal("The AI assistant didn't return a response. Please try again.");
+  }
 }

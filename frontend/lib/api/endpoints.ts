@@ -1,4 +1,4 @@
-import { apiFetch, apiUpload, buildQueryString, type UploadProgress } from "./client"
+import { apiFetch, apiStream, apiUpload, buildQueryString, type UploadProgress } from "./client"
 import type { ListParams, PaginatedResult } from "./types"
 
 // ─────────────────────────── AUTH ───────────────────────────
@@ -306,6 +306,9 @@ export const dashboardApi = {
 // ─────────────────────────── AI ASSISTANT ───────────────────────────
 
 export const aiAssistantApi = {
-  chat: (message: string, history?: { role: "user" | "assistant"; text: string }[]) =>
-    apiFetch<{ text: string }>("/public/ai-assistant/chat", { method: "POST", body: { message, history } }),
+  chat: (
+    message: string,
+    history: { role: "user" | "assistant"; text: string }[],
+    onChunk: (text: string) => void,
+  ) => apiStream("/public/ai-assistant/chat", { message, history }, onChunk),
 }

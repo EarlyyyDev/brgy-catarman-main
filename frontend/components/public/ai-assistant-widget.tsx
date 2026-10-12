@@ -68,6 +68,34 @@ export function AiAssistantWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, typing])
 
+  React.useEffect(() => {
+    if (!open) return
+    const scrollY = window.scrollY
+    const rootStyle = document.documentElement.style
+    const bodyStyle = document.body.style
+    const previousRootOverflow = rootStyle.overflow
+    const previousBodyStyles = {
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      width: bodyStyle.width,
+      overflow: bodyStyle.overflow,
+    }
+    rootStyle.overflow = "hidden"
+    bodyStyle.position = "fixed"
+    bodyStyle.top = `-${scrollY}px`
+    bodyStyle.width = "100%"
+    bodyStyle.overflow = "hidden"
+
+    return () => {
+      rootStyle.overflow = previousRootOverflow
+      bodyStyle.position = previousBodyStyles.position
+      bodyStyle.top = previousBodyStyles.top
+      bodyStyle.width = previousBodyStyles.width
+      bodyStyle.overflow = previousBodyStyles.overflow
+      window.scrollTo(0, scrollY)
+    }
+  }, [open])
+
   function openWidget() {
     setOpen(true)
     setShowTeaser(false)
@@ -82,18 +110,28 @@ export function AiAssistantWidget() {
       .filter((m) => m.id !== "greeting")
       .slice(-12)
       .map((m) => ({ role: m.role, text: m.text }))
-    setMessages((prev) => [...prev, userMessage])
+    const assistantId = nextMessageId("a")
+    let streamedText = ""
+    setMessages((prev) => [...prev, userMessage, { id: assistantId, role: "assistant", text: "" }])
     setTyping(true)
 
     try {
-      const { text: replyText } = await aiAssistantApi.chat(text, history)
-      setMessages((prev) => [...prev, { id: nextMessageId("a"), role: "assistant", text: replyText }])
+      await aiAssistantApi.chat(text, history, (chunk) => {
+        streamedText += chunk
+        setMessages((prev) => prev.map((message) => (message.id === assistantId ? { ...message, text: streamedText } : message)))
+      })
     } catch (err) {
       const fallback =
         err instanceof ApiError && err.status === 429
           ? "You've sent a lot of messages -- please wait a bit before trying again."
           : "Sorry, I'm having trouble responding right now. Please try again or contact the barangay office directly."
-      setMessages((prev) => [...prev, { id: nextMessageId("a"), role: "assistant", text: fallback }])
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? { ...message, text: streamedText ? `${streamedText}\n\n${fallback}` : fallback }
+            : message,
+        ),
+      )
     } finally {
       requestInFlight.current = false
       setTyping(false)
@@ -143,7 +181,7 @@ export function AiAssistantWidget() {
               </button>
             </div>
 
-            <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3.5 py-4">
+            <div ref={scrollRef} className="flex-1 space-y-3 overscroll-contain overflow-y-auto px-3.5 py-4">
               {messages.map((m) => (
                 <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                   <div
