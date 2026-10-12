@@ -42,6 +42,7 @@ export function AiAssistantWidget() {
   const [teaserDismissed, setTeaserDismissed] = React.useState(false)
   const [typing, setTyping] = React.useState(false)
   const [input, setInput] = React.useState("")
+  const requestInFlight = React.useRef(false)
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: "greeting",
@@ -74,8 +75,13 @@ export function AiAssistantWidget() {
   }
 
   async function respondTo(text: string) {
+    if (requestInFlight.current) return
+    requestInFlight.current = true
     const userMessage: ChatMessage = { id: nextMessageId("u"), role: "user", text }
-    const history = messages.filter((m) => m.id !== "greeting").map((m) => ({ role: m.role, text: m.text }))
+    const history = messages
+      .filter((m) => m.id !== "greeting")
+      .slice(-12)
+      .map((m) => ({ role: m.role, text: m.text }))
     setMessages((prev) => [...prev, userMessage])
     setTyping(true)
 
@@ -89,6 +95,7 @@ export function AiAssistantWidget() {
           : "Sorry, I'm having trouble responding right now. Please try again or contact the barangay office directly."
       setMessages((prev) => [...prev, { id: nextMessageId("a"), role: "assistant", text: fallback }])
     } finally {
+      requestInFlight.current = false
       setTyping(false)
     }
 
@@ -166,7 +173,8 @@ export function AiAssistantWidget() {
                   key={qa.label}
                   type="button"
                   onClick={() => respondTo(qa.prompt)}
-                  className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  disabled={typing}
+                  className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {qa.label}
                 </button>
@@ -178,11 +186,12 @@ export function AiAssistantWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your question..."
+                disabled={typing}
                 className="h-10 flex-1 rounded-full border border-input bg-background px-4 text-sm outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15"
               />
               <button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!input.trim() || typing}
                 aria-label="Send message"
                 className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
               >
