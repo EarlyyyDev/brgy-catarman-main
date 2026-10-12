@@ -1,8 +1,12 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/apiError.util";
 import { manilaMonthOfYear, startOfManilaDay, startOfManilaMonth, startOfManilaYear } from "../utils/manilaTime.util";
 
 async function getStats() {
+  const referenceDate = new Date();
+  const manilaDate = new Date(referenceDate.getTime() + 8 * 60 * 60 * 1000);
+  const trendStart = new Date(Date.UTC(manilaDate.getUTCFullYear(), manilaDate.getUTCMonth() - 5, 1) - 8 * 60 * 60 * 1000);
   const [
     totalResidents,
     activeResidents,
@@ -18,6 +22,10 @@ async function getStats() {
     activeBlotters,
     publishedAnnouncements,
     unreadNotifications,
+    residentsByTag,
+    todayPendingCertificates,
+    todayPendingComplaints,
+    trendRows,
   ] = await Promise.all([
     prisma.resident.count({ where: { deletedAt: null } }),
     prisma.resident.count({ where: { deletedAt: null, isActive: true } }),
@@ -41,10 +49,43 @@ async function getStats() {
     }),
     prisma.announcement.count({ where: { deletedAt: null, status: "PUBLISHED" } }),
     prisma.notification.count({ where: { isRead: false } }),
+    prisma.residentTag.groupBy({
+      by: ["tagType"],
+      where: { isActive: true, resident: { deletedAt: null } },
+      _count: true,
+    }),
+    prisma.certificateRequest.count({
+      where: { deletedAt: null, status: { in: ["PENDING", "PROCESSING"] }, submittedAt: { gte: startOfManilaDay(new Date()) } },
+    }),
+    prisma.complaint.count({
+      where: { deletedAt: null, status: { in: ["NEW", "UNDER_REVIEW"] }, submittedAt: { gte: startOfManilaDay(new Date()) } },
+    }),
+    prisma.$queryRaw<{ kind: string; month: string; count: number }[]>(Prisma.sql`
+      SELECT 'request' AS kind, TO_CHAR(DATE_TRUNC('month', "submittedAt" AT TIME ZONE 'Asia/Manila'), 'YYYY-MM') AS month,
+        COUNT(*)::int AS count
+      FROM "certificate_requests"
+      WHERE "deletedAt" IS NULL AND "submittedAt" >= ${trendStart}
+      GROUP BY 2
+      UNION ALL
+      SELECT 'complaint' AS kind, TO_CHAR(DATE_TRUNC('month', "submittedAt" AT TIME ZONE 'Asia/Manila'), 'YYYY-MM') AS month,
+        COUNT(*)::int AS count
+      FROM "complaints"
+      WHERE "deletedAt" IS NULL AND "submittedAt" >= ${trendStart}
+      GROUP BY 2
+    `),
   ]);
 
   const toCountMap = (rows: Array<{ _count: number } & Record<string, unknown>>, key: string) =>
     Object.fromEntries(rows.map((row) => [row[key], row._count]));
+  const sixMonthTrend = Array.from({ length: 6 }, (_, index) => {
+    const monthDate = new Date(Date.UTC(manilaDate.getUTCFullYear(), manilaDate.getUTCMonth() - 5 + index, 1));
+    const month = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, "0")}`;
+    return {
+      month,
+      requests: trendRows.find((row) => row.kind === "request" && row.month === month)?.count ?? 0,
+      complaints: trendRows.find((row) => row.kind === "complaint" && row.month === month)?.count ?? 0,
+    };
+  });
 
   return {
     residents: {
@@ -52,6 +93,7 @@ async function getStats() {
       active: activeResidents,
       registeredVoters,
       byGender: toCountMap(residentsByGender, "gender"),
+      byTag: toCountMap(residentsByTag, "tagType"),
     },
     households: {
       total: totalHouseholds,
@@ -71,6 +113,11 @@ async function getStats() {
     },
     announcements: { published: publishedAnnouncements },
     notifications: { unread: unreadNotifications },
+    today: {
+      pendingCertificates: todayPendingCertificates,
+      pendingComplaints: todayPendingComplaints,
+    },
+    sixMonthTrend,
   };
 }
 

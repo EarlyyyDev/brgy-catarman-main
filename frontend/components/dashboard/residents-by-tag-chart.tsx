@@ -2,17 +2,17 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAllResidents } from "@/lib/api/hooks/use-residents"
 import { RESIDENT_TAGS } from "@/lib/constants"
 
-export function ResidentsByTagChart() {
-  const { residents } = useAllResidents()
-
+export function ResidentsByTagChart({ counts }: { counts: Record<string, number> }) {
   const data = React.useMemo(() => {
-    const counts = RESIDENT_TAGS.map((tag) => ({ tag, count: residents.filter((r) => r.tags.includes(tag)).length }))
-    const max = Math.max(...counts.map((c) => c.count), 1)
-    return counts.map((c) => ({ ...c, pct: Math.round((c.count / max) * 100) }))
-  }, [residents])
+    const rows = RESIDENT_TAGS.map((tag) => {
+      const key = tag === "4Ps Beneficiary" ? "FOUR_PS_BENEFICIARY" : tag.toUpperCase().replace(/[^A-Z0-9]+/g, "_")
+      return { tag, count: counts[key] ?? counts[tag] ?? 0 }
+    })
+    const max = Math.max(...rows.map((row) => row.count), 1)
+    return rows.map((row) => ({ ...row, pct: Math.round((row.count / max) * 100) }))
+  }, [counts])
 
   return (
     <Card className="border-border/70">

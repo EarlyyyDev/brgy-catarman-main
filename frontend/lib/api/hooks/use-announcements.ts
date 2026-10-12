@@ -35,6 +35,7 @@ export function usePublishedAnnouncements(params?: { page?: number; pageSize?: n
   const { data, isLoading } = useQuery<PaginatedResult<unknown>>({
     queryKey: qk.announcements.public(queryParams),
     queryFn: () => announcementsApi.listPublished(queryParams),
+    staleTime: 30 * 1000,
   })
   const announcements = React.useMemo(() => (data?.items ?? []).map((a) => fromAnnouncementDto(a as never)), [data])
   return { announcements, total: data?.total ?? 0, isLoading }

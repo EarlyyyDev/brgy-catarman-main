@@ -29,6 +29,7 @@ export function usePublicDocumentTypes() {
   const { data, isLoading } = useQuery<BackendDocumentType[]>({
     queryKey: qk.documentTypes.public,
     queryFn: () => documentTypesApi.listPublic() as Promise<BackendDocumentType[]>,
+    staleTime: 5 * 60 * 1000,
   })
   return { documentTypes: data ?? [], isLoading }
 }

@@ -26,7 +26,7 @@ export function usePublicSettings() {
   const { data, isLoading } = useQuery<SystemSettings>({
     queryKey: qk.settings.public,
     queryFn: async () => toSystemSettings((await settingsApi.getPublic()) as Record<string, unknown>),
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
   })
   return { settings: data ?? FALLBACK_SETTINGS, isLoading }

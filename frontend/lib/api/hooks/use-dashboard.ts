@@ -2,6 +2,26 @@ import { useQuery } from "@tanstack/react-query"
 import { dashboardApi } from "@/lib/api/endpoints"
 import { qk } from "@/lib/api/query-keys"
 
+export interface DashboardStats {
+  residents: { total: number; byTag: Record<string, number> }
+  households: { total: number }
+  certificates: { byStatus: Record<string, number>; pending: number }
+  complaints: { byStatus: Record<string, number>; open: number }
+  blotters: { byStatus: Record<string, number>; active: number }
+  announcements: { published: number }
+  today: { pendingCertificates: number; pendingComplaints: number }
+  sixMonthTrend: { month: string; requests: number; complaints: number }[]
+}
+
+export function useDashboardStats() {
+  const { data, isLoading } = useQuery<DashboardStats>({
+    queryKey: qk.dashboard.stats,
+    queryFn: () => dashboardApi.stats() as Promise<DashboardStats>,
+    staleTime: 30 * 1000,
+  })
+  return { stats: data, isLoading }
+}
+
 interface PublicStats {
   residents: number
   households: number
@@ -14,6 +34,7 @@ export function usePublicStats() {
   const { data, isLoading } = useQuery<PublicStats>({
     queryKey: [...qk.dashboard.stats, "public"],
     queryFn: () => dashboardApi.statsPublic() as Promise<PublicStats>,
+    staleTime: 60 * 1000,
   })
   return { stats: data, isLoading }
 }

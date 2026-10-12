@@ -5,10 +5,11 @@ import { useApiMutation } from "@/lib/api/mutation-helpers"
 import { toOfficial, officialToPayload } from "@/lib/api/adapters/directory.adapter"
 import type { Official } from "@/types"
 
-function useOfficialsQuery(key: readonly unknown[], fetcher: () => Promise<unknown>) {
+function useOfficialsQuery(key: readonly unknown[], fetcher: () => Promise<unknown>, staleTime?: number) {
   const { data, isLoading } = useQuery<Official[]>({
     queryKey: key,
     queryFn: async () => ((await fetcher()) as unknown[]).map((o) => toOfficial(o as never)),
+    staleTime,
   })
   return { officials: data ?? [], isLoading }
 }
@@ -18,7 +19,7 @@ export function useOfficials() {
 }
 
 export function usePublicOfficials() {
-  return useOfficialsQuery(qk.officials.public, officialsApi.listPublic)
+  return useOfficialsQuery(qk.officials.public, officialsApi.listPublic, 5 * 60 * 1000)
 }
 
 export function useAddOfficial() {

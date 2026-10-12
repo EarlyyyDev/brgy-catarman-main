@@ -3,24 +3,20 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAllCertificateRequests } from "@/lib/api/hooks/use-certificate-requests"
-import { useAllComplaints } from "@/lib/api/hooks/use-complaints"
-import { lastNMonthLabels, countByMonth } from "@/lib/chart-data"
 
 const NAVY = "var(--primary)"
 const GOLD = "var(--gold)"
 
-export function CaseTrendChart() {
-  const { certificateRequests } = useAllCertificateRequests()
-  const { complaints } = useAllComplaints()
-
-  const months = React.useMemo(() => lastNMonthLabels(6), [])
-
-  const data = React.useMemo(() => {
-    const requestCounts = countByMonth(certificateRequests, (r) => r.submittedAt, months)
-    const complaintCounts = countByMonth(complaints, (c) => c.submittedAt, months)
-    return months.map((m) => ({ month: m.label, "Requested Documents": requestCounts[m.key], Complaints: complaintCounts[m.key] }))
-  }, [certificateRequests, complaints, months])
+export function CaseTrendChart({ trend }: { trend: { month: string; requests: number; complaints: number }[] }) {
+  const data = React.useMemo(
+    () =>
+      trend.map((row) => ({
+        month: new Date(`${row.month}-01T00:00:00`).toLocaleString("en", { month: "short", timeZone: "UTC" }),
+        "Requested Documents": row.requests,
+        Complaints: row.complaints,
+      })),
+    [trend],
+  )
 
   return (
     <Card className="border-border/70">

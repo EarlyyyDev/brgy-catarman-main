@@ -5,10 +5,11 @@ import { useApiMutation } from "@/lib/api/mutation-helpers"
 import { toEmergencyContact, emergencyContactToPayload } from "@/lib/api/adapters/directory.adapter"
 import type { EmergencyContact } from "@/types"
 
-function useEmergencyContactsQuery(key: readonly unknown[], fetcher: () => Promise<unknown>) {
+function useEmergencyContactsQuery(key: readonly unknown[], fetcher: () => Promise<unknown>, staleTime?: number) {
   const { data, isLoading } = useQuery<EmergencyContact[]>({
     queryKey: key,
     queryFn: async () => ((await fetcher()) as unknown[]).map((c) => toEmergencyContact(c as never)),
+    staleTime,
   })
   return { emergencyContacts: data ?? [], isLoading }
 }
@@ -18,7 +19,7 @@ export function useEmergencyContacts() {
 }
 
 export function usePublicEmergencyContacts() {
-  return useEmergencyContactsQuery(qk.emergencyContacts.public, emergencyContactsApi.listPublic)
+  return useEmergencyContactsQuery(qk.emergencyContacts.public, emergencyContactsApi.listPublic, 5 * 60 * 1000)
 }
 
 export function useAddEmergencyContact() {
