@@ -44,6 +44,7 @@ const envSchema = z.object({
   // AI assistant (public chat widget). Optional -- if unset, the endpoint
   // returns a clear error instead of crashing at startup.
   GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_KEYS: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-flash-latest"),
 });
 

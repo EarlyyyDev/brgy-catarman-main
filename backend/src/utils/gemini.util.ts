@@ -5,6 +5,39 @@ import { logger } from "./logger.util";
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [500, 1500];
+const DEFAULT_QUOTA_COOLDOWN_MS = 60_000;
+const MAX_QUOTA_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const keyCooldowns = new Map<string, number>();
+
+function getApiKeys(): string[] {
+  return [...new Set([...(env.GEMINI_API_KEYS ?? "").split(/[,\r\n]+/), env.GEMINI_API_KEY ?? ""].map((key) => key.trim()).filter(Boolean))];
+}
+
+function getAvailableKeys(keys: string[]): string[] {
+  const now = Date.now();
+  for (const [key, expiresAt] of keyCooldowns) {
+    if (expiresAt <= now) keyCooldowns.delete(key);
+  }
+  return keys.filter((key) => !keyCooldowns.has(key));
+}
+
+function quotaCooldownMs(response: Response, body: string): number {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) return Math.min(Math.max(seconds * 1000, 1000), MAX_QUOTA_COOLDOWN_MS);
+    const retryDate = Date.parse(retryAfter);
+    if (Number.isFinite(retryDate)) return Math.min(Math.max(retryDate - Date.now(), 1000), MAX_QUOTA_COOLDOWN_MS);
+  }
+
+  const retryText = body.match(/retry in\s+((?:\d+h)?(?:\d+m)?(?:\d+(?:\.\d+)?s)?)/i)?.[1];
+  if (!retryText) return DEFAULT_QUOTA_COOLDOWN_MS;
+  const hours = Number(retryText.match(/(\d+(?:\.\d+)?)h/i)?.[1] ?? 0);
+  const minutes = Number(retryText.match(/(\d+(?:\.\d+)?)m/i)?.[1] ?? 0);
+  const seconds = Number(retryText.match(/(\d+(?:\.\d+)?)s/i)?.[1] ?? 0);
+  const cooldown = (hours * 3600 + minutes * 60 + seconds) * 1000;
+  return Math.min(Math.max(cooldown, 1000), MAX_QUOTA_COOLDOWN_MS);
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,79 +184,66 @@ function buildSystemInstruction(context: AssistantContext): string {
     .join("\n");
 }
 
-/** Calls Gemini's REST API directly (no SDK dependency) to keep this
- * self-contained -- see https://ai.google.dev/api/generate-content. */
-export async function askGemini(message: string, history: ChatTurn[], context: AssistantContext): Promise<string> {
-  if (!env.GEMINI_API_KEY) {
-    throw ApiError.internal("The AI assistant is not configured yet.");
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
-  const requestBody = geminiRequestBody(message, history, context);
-
-  // Gemini occasionally returns 429/5xx under momentary load ("high demand,
-  // try again later") -- a couple of quick retries with backoff resolve most
-  // of these transparently instead of failing the resident's chat outright.
-  let lastErrorBody = "";
-  let lastStatus = 0;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: requestBody,
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
-      };
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        throw ApiError.internal("The AI assistant didn't return a response. Please try again.");
-      }
-      return text.trim();
-    }
-
-    lastStatus = res.status;
-    lastErrorBody = await res.text();
-
-    const canRetry = RETRYABLE_STATUSES.has(res.status) && attempt < MAX_ATTEMPTS - 1;
-    if (!canRetry) break;
-    await sleep(RETRY_DELAYS_MS[attempt]);
-  }
-
-  logger.error("Gemini request failed after retries", { status: lastStatus, body: lastErrorBody.slice(0, 500) });
-  throw ApiError.internal(
-    "The AI assistant is experiencing high demand right now. Please try again in a moment, or contact the barangay office directly.",
-  );
-}
-
 export async function* streamGemini(message: string, history: ChatTurn[], context: AssistantContext): AsyncGenerator<string> {
-  if (!env.GEMINI_API_KEY) {
+  const keys = getApiKeys();
+  if (keys.length === 0) {
     throw ApiError.internal("The AI assistant is not configured yet.");
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`;
+  const availableKeys = getAvailableKeys(keys);
+  if (availableKeys.length === 0) {
+    throw ApiError.tooManyRequests("The AI assistant has reached its current quota. Please try again later.");
+  }
+
   let response: Response | undefined;
   let lastErrorBody = "";
   let lastStatus = 0;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: geminiRequestBody(message, history, context),
-    });
-    if (response.ok) break;
+  let allKeysQuotaLimited = true;
+  const requestBody = geminiRequestBody(message, history, context);
+  for (const key of availableKeys) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${key}`;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+      } catch (error) {
+        allKeysQuotaLimited = false;
+        lastStatus = 0;
+        lastErrorBody = error instanceof Error ? error.message : String(error);
+        break;
+      }
+      if (response.ok) break;
 
-    lastStatus = response.status;
-    lastErrorBody = await response.text();
-    const canRetry = RETRYABLE_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS - 1;
-    if (!canRetry) break;
-    await sleep(RETRY_DELAYS_MS[attempt]);
+      lastStatus = response.status;
+      lastErrorBody = await response.text();
+      if (response.status === 429) {
+        const cooldownMs = quotaCooldownMs(response, lastErrorBody);
+        keyCooldowns.set(key, Date.now() + cooldownMs);
+        logger.warn("Gemini key is temporarily quota-limited; trying the next configured key", {
+          keyIndex: keys.indexOf(key) + 1,
+          cooldownMs,
+        });
+        break;
+      }
+      allKeysQuotaLimited = false;
+      if (!RETRYABLE_STATUSES.has(response.status) || attempt === MAX_ATTEMPTS - 1) break;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
+    if (response?.ok) break;
   }
 
   if (!response?.ok || !response.body) {
-    logger.error("Gemini streaming request failed", { status: lastStatus, body: lastErrorBody.slice(0, 500) });
+    logger.error("Gemini streaming request failed for configured keys", {
+      status: lastStatus,
+      body: lastErrorBody.slice(0, 500),
+      configuredKeyCount: keys.length,
+    });
+    if (allKeysQuotaLimited && availableKeys.every((key) => keyCooldowns.has(key))) {
+      throw ApiError.tooManyRequests("The AI assistant has reached its current quota. Please try again later.");
+    }
     throw ApiError.internal(
       "The AI assistant is experiencing high demand right now. Please try again in a moment, or contact the barangay office directly.",
     );

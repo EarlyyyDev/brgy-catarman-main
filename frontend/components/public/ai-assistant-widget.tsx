@@ -122,8 +122,10 @@ export function AiAssistantWidget() {
       })
     } catch (err) {
       const fallback =
-        err instanceof ApiError && err.status === 429
+        err instanceof ApiError && err.status === 429 && err.message.includes("You've sent a lot of messages")
           ? "You've sent a lot of messages -- please wait a bit before trying again."
+          : err instanceof ApiError && err.status === 429
+            ? "Sorry, I'm currently unavailable. Please try again later."
           : "Sorry, I'm having trouble responding right now. Please try again or contact the barangay office directly."
       setMessages((prev) =>
         prev.map((message) =>
