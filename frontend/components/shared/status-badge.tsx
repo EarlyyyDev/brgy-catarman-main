@@ -30,6 +30,7 @@ const STATUS_TONE: Record<string, ToneKey> = {
   Claimed: "success",
   // Complaint statuses
   New: "info",
+  "Under Review": "warning",
   Validated: "gold",
   Resolved: "success",
   Archived: "muted",
@@ -42,6 +43,7 @@ const STATUS_TONE: Record<string, ToneKey> = {
   Closed: "muted",
   // Staff / general statuses
   Active: "success",
+  Inactive: "muted",
   Disabled: "danger",
   Draft: "muted",
   Scheduled: "info",
@@ -49,6 +51,7 @@ const STATUS_TONE: Record<string, ToneKey> = {
   Success: "success",
   Failed: "danger",
   Completed: "success",
+  Cancelled: "muted",
   "In Progress": "info",
 }
 

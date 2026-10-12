@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { FileText, Menu, Search, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,7 +9,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { BarangaySeal } from "@/components/shared/barangay-seal"
 import { AnnouncementTicker } from "@/components/public/announcement-ticker"
 import { usePublicDialogStore, type PublicDialogKey } from "@/lib/stores/public-dialog-store"
-import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
   { label: "Home", href: "/#hero" },
@@ -26,41 +24,25 @@ const SERVICE_LINKS: { label: string; key: PublicDialogKey; icon: typeof FileTex
 ]
 
 export function Navbar() {
-  const [scrolled, setScrolled] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const pathname = usePathname()
   const setOpenDialog = usePublicDialogStore((s) => s.setOpenDialog)
-
-  React.useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 12)
-    }
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
 
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 w-full border-b transition-colors",
-        scrolled || pathname !== "/"
-          ? "border-border/60 bg-background/90 backdrop-blur-md supports-backdrop-filter:bg-background/70"
-          : "border-transparent bg-transparent"
-      )}
+      className="fixed inset-x-0 top-0 z-50 w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground shadow-sm"
     >
       <AnnouncementTicker />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5">
           <BarangaySeal />
           <div className="leading-tight">
-            <p className={cn("font-heading text-base font-bold tracking-tight", scrolled || pathname !== "/" ? "text-foreground" : "text-white")}>
+            <p className="font-heading text-base font-bold tracking-tight text-primary-foreground">
               e-Catarman
             </p>
-            <p className={cn("text-[11px] font-medium uppercase tracking-widest", scrolled || pathname !== "/" ? "text-muted-foreground" : "text-white/70")}>
+            <p className="text-[11px] font-medium uppercase tracking-widest text-primary-foreground/70">
               Digital Barangay Operations Management System
             </p>
           </div>
@@ -71,20 +53,14 @@ export function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                scrolled || pathname !== "/" ? "text-foreground/80 hover:bg-secondary hover:text-foreground" : "text-white/90 hover:bg-white/10 hover:text-white"
-              )}
+              className="rounded-md px-3 py-2 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-white/10 hover:text-primary-foreground"
             >
               {link.label}
             </a>
           ))}
           <div className="group relative">
             <button
-              className={cn(
-                "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                scrolled || pathname !== "/" ? "text-foreground/80 hover:bg-secondary hover:text-foreground" : "text-white/90 hover:bg-white/10 hover:text-white"
-              )}
+              className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-primary-foreground/85 transition-colors hover:bg-white/10 hover:text-primary-foreground"
             >
               Services
             </button>
@@ -113,24 +89,24 @@ export function Navbar() {
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("lg:hidden", !scrolled && pathname === "/" && "text-white hover:bg-white/10 hover:text-white")}>
+            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/10 hover:text-primary-foreground lg:hidden">
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right">
+          <SheetContent side="right" className="border-primary-foreground/10 bg-primary text-primary-foreground">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
+              <SheetTitle className="flex items-center gap-2 text-primary-foreground">
                 <BarangaySeal className="size-8" />
                 e-Catarman
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-1 px-4">
               {NAV_LINKS.map((link) => (
-                <a key={link.label} href={link.href} onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2.5 text-sm font-medium hover:bg-secondary">
+                <a key={link.label} href={link.href} onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2.5 text-sm font-medium text-primary-foreground/85 hover:bg-white/10 hover:text-primary-foreground">
                   {link.label}
                 </a>
               ))}
-              <p className="mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Public Services</p>
+              <p className="mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-primary-foreground/60">Public Services</p>
               {SERVICE_LINKS.map((service) => (
                 <button
                   key={service.key}
@@ -139,9 +115,9 @@ export function Navbar() {
                     setMobileOpen(false)
                     setOpenDialog(service.key)
                   }}
-                  className="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium hover:bg-secondary"
+                  className="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium text-primary-foreground/85 hover:bg-white/10 hover:text-primary-foreground"
                 >
-                  <service.icon className="size-4 text-primary" />
+                  <service.icon className="size-4 text-gold" />
                   {service.label}
                 </button>
               ))}

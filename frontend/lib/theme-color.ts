@@ -39,6 +39,13 @@ function contrastColor(hex: string, dark = "#0a1930", light = "#ffffff"): string
   return lightRatio >= darkRatio ? light : dark
 }
 
+function mixWithWhite(hex: string, colorWeight: number): string {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return "#ffffff"
+  const mixed = rgb.map((channel) => Math.round(channel * colorWeight + 255 * (1 - colorWeight)))
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`
+}
+
 function setVar(name: string, value: string) {
   document.documentElement.style.setProperty(name, value)
 }
@@ -58,15 +65,16 @@ export function applyPrimaryColor(primary: string) {
 }
 
 export function applyAccentColor(accent: string) {
-  const foreground = contrastColor(accent)
-  const mutedTint = `color-mix(in srgb, ${accent} 18%, white)`
+  const foreground = contrastColor(mixWithWhite(accent, 0.18))
+  const strongForeground = contrastColor(accent)
+  const mutedTint = mixWithWhite(accent, 0.18)
   setVar("--gold", accent)
   setVar("--gold-foreground", foreground)
   setVar("--gold-muted", mutedTint)
   setVar("--accent", mutedTint)
   setVar("--accent-foreground", foreground)
   setVar("--sidebar-primary", accent)
-  setVar("--sidebar-primary-foreground", foreground)
+  setVar("--sidebar-primary-foreground", strongForeground)
   setVar("--sidebar-ring", accent)
   setVar("--chart-2", accent)
 }
