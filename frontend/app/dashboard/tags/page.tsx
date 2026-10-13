@@ -97,14 +97,23 @@ export default function ResidentTaggingPage() {
         <CardHeader>
           <CardTitle className="text-sm font-semibold">Tag Distribution</CardTitle>
         </CardHeader>
-        <CardContent className="h-64 pl-0">
+        <CardContent className="h-[320px] px-2 sm:px-4">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ left: -20 }}>
+            <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 12, top: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
-              <XAxis dataKey="tag" fontSize={11} tickLine={false} axisLine={false} interval={0} angle={-15} textAnchor="end" height={60} />
-              <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+              <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+              <YAxis
+                type="category"
+                dataKey="tag"
+                width={110}
+                tickLine={false}
+                axisLine={false}
+                interval={0}
+                fontSize={11}
+                className="text-[11px]"
+              />
               <Tooltip />
-              <Bar dataKey="count" name="Residents" fill={GOLD} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" name="Residents" fill={GOLD} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

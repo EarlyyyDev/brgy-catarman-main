@@ -14,12 +14,41 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  applicationName: "e-Catarman",
   title: {
     default: "e-Catarman | Digital Barangay Operations Management System",
     template: "%s | e-Catarman",
   },
   description:
-    "e-Catarman, the official Digital Barangay Operations Management System of Barangay Catarman — request documents, track applications, report incidents, and stay informed of community announcements.",
+    "e-Catarman is the official digital barangay system for Barangay Catarman, featuring barangay history, current officials, emergency hotlines, public services, announcements, and online requests.",
+  keywords: [
+    "Barangay Catarman",
+    "Catarman history",
+    "Barangay officials Catarman",
+    "Barangay emergency hotline Catarman",
+    "Barangay services Catarman",
+    "Barangay announcements Catarman",
+    "Barangay certificate request Catarman",
+    "Barangay report incident Catarman",
+    "Digital barangay system",
+  ],
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "Barangay Catarman | Digital Barangay Operations Management System",
+    description:
+      "Official community portal for Barangay Catarman — accessible services, council officials, emergency contacts, announcements, and public records.",
+    siteName: "Barangay Catarman",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Barangay Catarman",
+    description:
+      "Official digital barangay system for Barangay Catarman, including public announcements, emergency hotlines, and community information.",
+  },
   icons: {
     icon: "/catarman-logo.jpg",
     shortcut: "/catarman-logo.jpg",

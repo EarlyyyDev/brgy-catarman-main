@@ -207,7 +207,7 @@ export function AnnouncementPostCard({
         <div className="relative" onMouseEnter={openPicker} onMouseLeave={scheduleClosePicker}>
           {pickerOpen ? (
             <div
-              className="absolute bottom-full left-1/2 z-20 mb-1 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-lg select-none"
+              className="absolute bottom-full left-0 z-20 mb-1 flex max-w-[calc(100vw-3rem)] items-center gap-1 rounded-full border border-border bg-card p-1.5 shadow-lg select-none sm:left-1/2 sm:-translate-x-1/2"
               onMouseEnter={openPicker}
               onPointerDown={(event) => event.stopPropagation()}
             >

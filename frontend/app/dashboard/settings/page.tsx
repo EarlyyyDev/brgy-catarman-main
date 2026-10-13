@@ -25,6 +25,15 @@ import { useMe } from "@/lib/api/hooks/use-auth"
 import { dataUrlToFile } from "@/lib/api/adapters/file.adapter"
 import type { Official, SystemSettings, UploadedFile } from "@/types"
 
+const SETTINGS_TABS = [
+  { value: "general", label: "Barangay Info", icon: Building },
+  { value: "officials", label: "Officials", icon: Users2 },
+  { value: "contact", label: "Contact & Email", icon: Phone },
+  { value: "theme", label: "Theme & Branding", icon: Palette },
+  { value: "pricing", label: "Certificate Pricing", icon: Banknote },
+  { value: "maintenance", label: "Maintenance", icon: Wrench },
+] as const
+
 export default function SettingsPage() {
   const { data: session } = useMe()
 
@@ -41,6 +50,7 @@ function SystemSettingsPage() {
   const updateSettingsMutation = useUpdateSettings()
   const deleteOfficialMutation = useDeleteOfficial()
   const uploadImage = useUploadSettingsImage()
+  const [activeTab, setActiveTab] = React.useState("general")
   const updateSettings = (values: Partial<SystemSettings>) => updateSettingsMutation.mutate(values)
 
   /** FileDropzone only ever produces local base64 data: URLs -- these must be
@@ -141,32 +151,32 @@ function SystemSettingsPage() {
     <div className="space-y-6">
       <PageHeader title="System Settings" description="Configure barangay information, officials, and system preferences." />
 
-      <Tabs defaultValue="general">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="general">
-            <Building className="size-4" />
-            Barangay Info
-          </TabsTrigger>
-          <TabsTrigger value="officials">
-            <Users2 className="size-4" />
-            Officials
-          </TabsTrigger>
-          <TabsTrigger value="contact">
-            <Phone className="size-4" />
-            Contact & Email
-          </TabsTrigger>
-          <TabsTrigger value="theme">
-            <Palette className="size-4" />
-            Theme & Branding
-          </TabsTrigger>
-          <TabsTrigger value="pricing">
-            <Banknote className="size-4" />
-            Certificate Pricing
-          </TabsTrigger>
-          <TabsTrigger value="maintenance">
-            <Wrench className="size-4" />
-            Maintenance
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="md:hidden">
+          <label htmlFor="settings-tab-select" className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Settings Section
+          </label>
+          <select
+            id="settings-tab-select"
+            value={activeTab}
+            onChange={(event) => setActiveTab(event.target.value)}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {SETTINGS_TABS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <TabsList className="hidden flex-wrap md:flex">
+          {SETTINGS_TABS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger key={value} value={value}>
+              <Icon className="size-4" />
+              {label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="general">

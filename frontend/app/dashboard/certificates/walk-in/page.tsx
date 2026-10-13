@@ -49,6 +49,7 @@ export default function WalkInCertificatePage() {
   const submitWalkInRequest = useSubmitWalkInCertificateRequest()
 
   const [selectedResidentId, setSelectedResidentId] = React.useState<string>("")
+  const [residentSearch, setResidentSearch] = React.useState("")
   const [residentPhoto, setResidentPhoto] = React.useState("")
   const [requirements, setRequirements] = React.useState<UploadedFile[]>([])
   const [viaRepresentative, setViaRepresentative] = React.useState(false)
@@ -71,12 +72,21 @@ export default function WalkInCertificatePage() {
   })
 
   const documentType = form.watch("documentType")
+  const residentMatches = React.useMemo(() => {
+    const query = residentSearch.trim().toLowerCase()
+    if (!query) return []
+    return residents
+      .filter((resident) => `${getResidentFullName(resident)} ${resident.address.purok} ${resident.address.street}`.toLowerCase().includes(query))
+      .slice(0, 8)
+  }, [residentSearch, residents])
 
   function handleSelectResident(id: string) {
     setSelectedResidentId(id)
     const resident = residents.find((r) => r.id === id)
     if (resident) {
-      form.setValue("requestorName", getResidentFullName(resident))
+      const fullName = getResidentFullName(resident)
+      setResidentSearch(fullName)
+      form.setValue("requestorName", fullName)
       form.setValue("address", `${resident.address.houseNumber} ${resident.address.street}, ${resident.address.purok}, Barangay Catarman`)
       form.setValue("contactNumber", resident.contactNumber)
       form.setValue("email", resident.email ?? "")
@@ -117,26 +127,43 @@ export default function WalkInCertificatePage() {
 
       <Card className="border-border/70">
         <CardContent className="p-6 sm:p-8">
-          <div className="mb-6 flex flex-col gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-4 sm:flex-row sm:items-center">
-            <div className="flex flex-1 items-center gap-3">
+          <div className="mb-6 rounded-lg border border-dashed border-border bg-muted/30 p-4">
+            <div className="flex items-center gap-3">
               <UserSearch className="size-5 shrink-0 text-primary" />
               <div className="flex-1">
                 <Label className="text-sm font-semibold">Link to Existing Resident (optional)</Label>
-                <p className="text-xs text-muted-foreground">Selecting a resident will auto-fill their information below.</p>
+                <p className="text-xs text-muted-foreground">Search for a resident to auto-fill their information below.</p>
               </div>
             </div>
-            <Select value={selectedResidentId} onValueChange={handleSelectResident}>
-              <SelectTrigger className="w-full sm:w-[260px]">
-                <SelectValue placeholder="Search resident..." />
-              </SelectTrigger>
-              <SelectContent>
-                {residents.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {getResidentFullName(r)} — {r.address.purok}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative mt-3">
+              <Input
+                value={residentSearch}
+                onChange={(event) => {
+                  setResidentSearch(event.target.value)
+                  if (!event.target.value.trim()) {
+                    setSelectedResidentId("")
+                  }
+                }}
+                placeholder="Search resident by name, purok, or street..."
+                className="w-full"
+              />
+              {residentSearch.trim() && residentMatches.length > 0 ? (
+                <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+                  {residentMatches.map((resident) => (
+                    <li key={resident.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectResident(resident.id)}
+                        className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                      >
+                        <span className="font-medium text-foreground">{getResidentFullName(resident)}</span>
+                        <span className="text-xs text-muted-foreground">{resident.address.purok}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </div>
 
           <Form {...form}>
