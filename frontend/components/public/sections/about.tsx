@@ -17,6 +17,11 @@ const localServiceHighlights = [
   { title: "Public Market", value: "Commercial activity and community access" },
 ]
 
+const barangayQuickStats = [
+  { label: "Pop. Density", value: "11,840.19/Sq. Km" },
+  { label: "Zip Code", value: "6017" },
+]
+
 export function About() {
   const { settings: systemSettings } = usePublicSettings()
 
@@ -127,6 +132,18 @@ export function About() {
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Address</p>
                 <p className="mt-2 text-sm text-foreground/80">{systemSettings.fullAddress}</p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Barangay Facts</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  {barangayQuickStats.map((item) => (
+                    <div key={item.label} className="rounded-xl border border-border bg-secondary/20 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</p>
+                      <p className="mt-2 text-base font-bold text-foreground">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">

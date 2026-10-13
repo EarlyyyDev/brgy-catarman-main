@@ -85,6 +85,13 @@ export function Navbar() {
               </div>
             </div>
           </div>
+          <a
+            href="#emergency-hotlines"
+            className="ml-1 inline-flex items-center gap-2 rounded-full bg-red-500 px-3.5 py-2 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-400"
+          >
+            <ShieldAlert className="size-4" />
+            Emergency Hotline
+          </a>
         </nav>
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -106,7 +113,15 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <p className="mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-primary-foreground/60">Public Services</p>
+              <a
+                href="#emergency-hotlines"
+                onClick={() => setMobileOpen(false)}
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-red-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-400"
+              >
+                <ShieldAlert className="size-4" />
+                Emergency Hotline
+              </a>
+              <p className="mt-3 px-3 text-xs font-semibold uppercase tracking-wide text-primary-foreground/60">Public Services</p>
               {SERVICE_LINKS.map((service) => (
                 <button
                   key={service.key}
