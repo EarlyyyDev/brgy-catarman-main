@@ -3,7 +3,12 @@ import * as directoryController from "../controllers/directory.controller";
 import { requireAuth } from "../middlewares/auth.middleware";
 import { requireAdmin } from "../middlewares/role.middleware";
 import { validateMiddleware } from "../middlewares/validate.middleware";
-import { officialValidator, emergencyContactValidator, activityValidator } from "../validators/directory.validators";
+import {
+  officialValidator,
+  emergencyContactValidator,
+  emergencyContactUpdateValidator,
+  activityValidator,
+} from "../validators/directory.validators";
 
 const officialsRouter = Router();
 officialsRouter.use(requireAuth);
@@ -22,7 +27,13 @@ emergencyContactsRouter.post(
   validateMiddleware,
   directoryController.createEmergencyContact,
 );
-emergencyContactsRouter.patch("/:id", requireAdmin, directoryController.updateEmergencyContact);
+emergencyContactsRouter.patch(
+  "/:id",
+  requireAdmin,
+  emergencyContactUpdateValidator,
+  validateMiddleware,
+  directoryController.updateEmergencyContact,
+);
 emergencyContactsRouter.delete("/:id", requireAdmin, directoryController.deleteEmergencyContact);
 
 const activitiesRouter = Router();

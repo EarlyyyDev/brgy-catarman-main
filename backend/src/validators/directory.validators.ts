@@ -16,6 +16,16 @@ export const emergencyContactValidator = [
   body("availability").isString().trim().notEmpty(),
 ];
 
+export const emergencyContactUpdateValidator = [
+  body("name").optional().isString().trim().notEmpty(),
+  body("category")
+    .optional()
+    .isIn(["POLICE", "FIRE", "MEDICAL", "DISASTER_RESPONSE", "BARANGAY_HOTLINE", "OTHER"]),
+  body("contactNumber").optional().isString().trim().notEmpty(),
+  body("address").optional({ values: "null" }).isString(),
+  body("availability").optional().isString().trim().notEmpty(),
+];
+
 export const activityValidator = [
   body("title").isString().trim().notEmpty(),
   body("description").isString().trim().notEmpty(),

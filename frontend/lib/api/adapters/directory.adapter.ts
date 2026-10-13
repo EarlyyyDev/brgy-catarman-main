@@ -80,12 +80,14 @@ export function toEmergencyContact(c: BackendEmergencyContact): EmergencyContact
   }
 }
 
-export function emergencyContactToPayload(values: Omit<EmergencyContact, "id">) {
-  return {
-    name: values.name,
-    category: CATEGORY_TO_BACKEND[values.category],
-    contactNumber: values.contactNumber,
-    address: values.address || undefined,
-    availability: values.availability,
-  }
+export function emergencyContactToPayload(values: Partial<Omit<EmergencyContact, "id">>) {
+  const payload: Record<string, string | undefined> = {}
+
+  if (values.name !== undefined) payload.name = values.name
+  if (values.category !== undefined) payload.category = CATEGORY_TO_BACKEND[values.category]
+  if (values.contactNumber !== undefined) payload.contactNumber = values.contactNumber
+  if (values.address !== undefined) payload.address = values.address || undefined
+  if (values.availability !== undefined) payload.availability = values.availability
+
+  return payload
 }

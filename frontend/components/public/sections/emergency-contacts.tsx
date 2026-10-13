@@ -1,39 +1,61 @@
 "use client"
 
-import { Phone, Siren } from "lucide-react"
+import { ArrowRight, Phone, Siren } from "lucide-react"
 import { usePublicEmergencyContacts } from "@/lib/api/hooks/use-emergency-contacts"
 import { Card, CardContent } from "@/components/ui/card"
 
 export function EmergencyContactsSection() {
   const { emergencyContacts } = usePublicEmergencyContacts()
+  const primaryHotline = emergencyContacts[0]
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400">
-          <Siren className="size-6" />
-        </div>
-        <h2 className="mt-4 font-heading text-3xl font-bold text-foreground sm:text-4xl">Emergency Hotlines</h2>
-        <p className="mt-3 text-muted-foreground">Save these numbers — help is one call away, day or night.</p>
-      </div>
+    <section id="emergency-hotlines" className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-background py-24 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(239,68,68,0.18),_transparent_34%)]" />
 
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {emergencyContacts.map((contact) => (
-          <Card key={contact.id} className="border-border/70">
-            <CardContent className="flex items-start gap-4 p-5">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                <Phone className="size-5" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{contact.name}</p>
-                <a href={`tel:${contact.contactNumber.replace(/[^\d+]/g, "")}`} className="mt-1 block text-lg font-bold text-primary hover:underline">
-                  {contact.contactNumber}
-                </a>
-                <p className="mt-1 text-xs text-muted-foreground">{contact.availability}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-red-500/15 text-red-300 ring-1 ring-red-400/20">
+            <Siren className="size-7" />
+          </div>
+          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.2em] text-red-300">24/7 emergency response</p>
+          <h2 className="mt-3 font-heading text-3xl font-bold text-white sm:text-4xl">Emergency Hotlines</h2>
+          <p className="mt-3 text-base text-slate-300">Save these numbers — help is one call away, day or night.</p>
+        </div>
+
+        {primaryHotline ? (
+          <div className="mt-10 flex justify-center">
+            <a
+              href={`tel:${primaryHotline.contactNumber.replace(/[^\d+]/g, "")}`}
+              className="inline-flex items-center gap-2 rounded-full bg-red-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/20 transition hover:bg-red-400"
+            >
+              Call the hotline now
+              <ArrowRight className="size-4" />
+            </a>
+          </div>
+        ) : null}
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {emergencyContacts.map((contact) => (
+            <Card key={contact.id} className="border-white/10 bg-white/5 text-white shadow-[0_20px_45px_rgba(15,23,42,0.18)] backdrop-blur-sm">
+              <CardContent className="flex items-start gap-4 p-5">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-red-500/15 text-red-300 ring-1 ring-red-400/20">
+                  <Phone className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white">{contact.name}</p>
+                  <a
+                    href={`tel:${contact.contactNumber.replace(/[^\d+]/g, "")}`}
+                    className="mt-1 block text-lg font-bold text-red-200 transition hover:text-white hover:underline"
+                  >
+                    {contact.contactNumber}
+                  </a>
+                  <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-300">{contact.category}</p>
+                  <p className="mt-1 text-xs text-slate-300">{contact.availability}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </section>
   )

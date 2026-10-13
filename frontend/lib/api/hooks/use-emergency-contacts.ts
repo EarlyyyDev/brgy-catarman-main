@@ -32,7 +32,8 @@ export function useAddEmergencyContact() {
 
 export function useUpdateEmergencyContact() {
   return useApiMutation<EmergencyContact, { id: string; values: Partial<Omit<EmergencyContact, "id">> }>({
-    mutationFn: async ({ id, values }) => toEmergencyContact((await emergencyContactsApi.update(id, values)) as never),
+    mutationFn: async ({ id, values }) =>
+      toEmergencyContact((await emergencyContactsApi.update(id, emergencyContactToPayload(values))) as never),
     invalidates: [qk.emergencyContacts.all, qk.emergencyContacts.public],
     successMessage: "Emergency contact updated.",
   })

@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ecatarman.online"),
+  alternates: {
+    canonical: "/",
+  },
   applicationName: "e-Catarman",
   title: {
     default: "e-Catarman | Digital Barangay Operations Management System",
