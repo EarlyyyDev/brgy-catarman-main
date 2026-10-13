@@ -10,6 +10,13 @@ const landmarkHighlights = [
   "Market area and public service corridors",
 ]
 
+const localServiceHighlights = [
+  { title: "Barangay Hall", value: "Local governance and public assistance" },
+  { title: "Health Center", value: "Primary care and wellness services" },
+  { title: "School Zone", value: "Education and youth development" },
+  { title: "Public Market", value: "Commercial activity and community access" },
+]
+
 export function About() {
   const { settings: systemSettings } = usePublicSettings()
 
@@ -48,7 +55,7 @@ export function About() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3">
               <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                 <div className="flex items-center gap-2 text-primary">
                   <ShieldCheck className="size-4" />
@@ -101,8 +108,8 @@ export function About() {
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="overflow-hidden rounded-2xl border border-border bg-muted/30">
               <iframe
-                title="Map of Barangay Catarman"
-                src="https://www.google.com/maps?q=Barangay+Catarman+Northern+Samar&z=12&output=embed"
+                title="Map of Barangay Catarman, Cordova, Cebu"
+                src="https://www.google.com/maps?q=Barangay+Catarman%2C+Cordova%2C+Cebu%2C+Philippines&z=16&output=embed"
                 className="h-[360px] w-full border-0"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -123,13 +130,15 @@ export function About() {
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Mission</p>
-                <p className="mt-2 text-sm leading-relaxed text-foreground/80">{systemSettings.missionStatement}</p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Vision</p>
-                <p className="mt-2 text-sm leading-relaxed text-foreground/80">{systemSettings.visionStatement}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Key Service Areas</p>
+                <div className="mt-3 space-y-2">
+                  {localServiceHighlights.map((item) => (
+                    <div key={item.title} className="rounded-xl border border-border bg-secondary/20 px-3 py-2">
+                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
