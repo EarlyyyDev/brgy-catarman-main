@@ -49,15 +49,6 @@ export default function LoginPage() {
     }
   }, [router, session, sessionLoading])
 
-  if (sessionLoading || session) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/30">
-        <BarangaySeal className="size-12 animate-pulse" />
-        <p className="text-sm text-muted-foreground">Redirecting to your dashboard...</p>
-      </div>
-    )
-  }
-
   React.useEffect(() => {
     if (cooldown <= 0) return
     const timer = setInterval(() => {
@@ -71,6 +62,15 @@ export default function LoginPage() {
     }, 1000)
     return () => clearInterval(timer)
   }, [cooldown])
+
+  if (sessionLoading || session) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/30">
+        <BarangaySeal className="size-12 animate-pulse" />
+        <p className="text-sm text-muted-foreground">Redirecting to your dashboard...</p>
+      </div>
+    )
+  }
 
   async function onSubmit(values: LoginValues) {
     try {
