@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { BarangaySeal } from "@/components/shared/barangay-seal"
 import { Particles } from "@/components/public/sections/particles"
 import { ForgotPasswordDialog } from "@/components/shared/forgot-password-dialog"
-import { useLogin } from "@/lib/api/hooks/use-auth"
+import { useLogin, useMe } from "@/lib/api/hooks/use-auth"
 import { usePublicSettings } from "@/lib/api/hooks/use-settings"
 import { ApiError } from "@/lib/api/types"
 
@@ -32,10 +32,26 @@ type LoginValues = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const router = useRouter()
   const login = useLogin()
+  const { data: session, isLoading: sessionLoading } = useMe()
   const { settings } = usePublicSettings()
   const [formError, setFormError] = React.useState<string | null>(null)
   const [cooldown, setCooldown] = React.useState(0)
   const [forgotPasswordOpen, setForgotPasswordOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!sessionLoading && session) {
+      router.replace("/dashboard/overview")
+    }
+  }, [router, session, sessionLoading])
+
+  if (sessionLoading || session) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-muted/30">
+        <BarangaySeal className="size-12 animate-pulse" />
+        <p className="text-sm text-muted-foreground">Redirecting to your dashboard...</p>
+      </div>
+    )
+  }
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),

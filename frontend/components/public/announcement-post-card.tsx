@@ -36,6 +36,7 @@ export function AnnouncementPostCard({
 }) {
   const [reactionsOpen, setReactionsOpen] = React.useState(false)
   const [pickerOpen, setPickerOpen] = React.useState(false)
+  const [expanded, setExpanded] = React.useState(false)
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -154,11 +155,20 @@ export function AnnouncementPostCard({
         </div>
         <h3 className="mt-2 break-words font-heading text-base font-bold text-foreground">{announcement.title}</h3>
         <div
-          className="mt-1.5 line-clamp-3 break-words text-sm leading-relaxed text-foreground/80 [&_a]:text-primary [&_a]:underline [&_a]:break-all"
+          className={cn(
+            "mt-1.5 break-words text-sm leading-relaxed text-foreground/80 [&_a]:text-primary [&_a]:underline [&_a]:break-all",
+            !expanded && "line-clamp-3"
+          )}
           dangerouslySetInnerHTML={{ __html: prepareAnnouncementHtml(announcement.content) }}
         />
         {isLong ? (
-          <p className="mt-1 text-sm font-medium text-muted-foreground">Read the full announcement above.</p>
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-1 text-sm font-semibold text-muted-foreground hover:text-primary hover:underline"
+          >
+            {expanded ? "See less" : "See more"}
+          </button>
         ) : null}
 
         {mediaUrls.length > 0 ? <AnnouncementMediaGrid urls={mediaUrls} onMediaClick={setLightboxIndex} /> : null}
