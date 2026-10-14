@@ -131,6 +131,10 @@ export function Footer() {
             <button type="button" onClick={() => setTermsOpen(true)} className="transition-colors hover:text-white">
               Terms & Conditions
             </button>
+            <span className="text-white/25">•</span>
+            <Link href="/sitemap.xml" className="transition-colors hover:text-white">
+              Sitemap
+            </Link>
             <span className="hidden text-white/25 sm:inline">•</span>
             <p className="hidden sm:inline">Built for transparent and efficient local governance.</p>
           </div>
