@@ -199,7 +199,9 @@ export function CommentRow({ comment, viewerKey, viewerName, isStaffContext = fa
       <AnnouncementReactionsDialog
         open={reactorsOpen}
         onOpenChange={setReactorsOpen}
-        reactionCount={comment.reactionCount}
+        reactionCounts={{
+          ...(comment.myReaction ? { [comment.myReaction]: comment.reactionCount } : {}),
+        }}
         userReaction={comment.myReaction}
       />
     </div>
