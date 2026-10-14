@@ -38,6 +38,11 @@ export default function LoginPage() {
   const [cooldown, setCooldown] = React.useState(0)
   const [forgotPasswordOpen, setForgotPasswordOpen] = React.useState(false)
 
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "", rememberMe: true },
+  })
+
   React.useEffect(() => {
     if (!sessionLoading && session) {
       router.replace("/dashboard/overview")
@@ -52,11 +57,6 @@ export default function LoginPage() {
       </div>
     )
   }
-
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "", rememberMe: true },
-  })
 
   React.useEffect(() => {
     if (cooldown <= 0) return
