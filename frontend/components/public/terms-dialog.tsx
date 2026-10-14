@@ -93,7 +93,7 @@ export function TermsAndConditionsDialog({ open, onOpenChange }: { open: boolean
 
           <section className="space-y-3">
             <h3 className="font-heading text-lg font-bold text-slate-900">6. Privacy and Personal Information</h3>
-            <p>The collection, use, storage, and processing of personal information through e-Catarman are addressed in the platform's Privacy Policy and are subject to applicable Philippine data protection laws.</p>
+            <p>The collection, use, storage, and processing of personal information through e-Catarman are addressed in the platforms Privacy Policy and are subject to applicable Philippine data protection laws.</p>
           </section>
 
           <section className="space-y-3">

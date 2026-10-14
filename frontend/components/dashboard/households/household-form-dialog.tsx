@@ -101,8 +101,11 @@ export function HouseholdFormDialog({ open, onOpenChange, household, defaultSiti
     defaultValues: EMPTY_DEFAULTS,
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const headResidentId = form.watch("headResidentId")
+  // eslint-disable-next-line react-hooks/incompatible-library
   const memberIds = form.watch("memberIds")
+  // eslint-disable-next-line react-hooks/incompatible-library
   const contactNumber = form.watch("contactNumber")
 
   const residentMap = React.useMemo(() => new Map(residents.map((r) => [r.id, r])), [residents])

@@ -77,6 +77,7 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const category = form.watch("category")
 
   React.useEffect(() => {

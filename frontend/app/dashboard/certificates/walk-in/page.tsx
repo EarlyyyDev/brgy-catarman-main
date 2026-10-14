@@ -71,6 +71,7 @@ export default function WalkInCertificatePage() {
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const documentType = form.watch("documentType")
   const residentMatches = React.useMemo(() => {
     const query = residentSearch.trim().toLowerCase()

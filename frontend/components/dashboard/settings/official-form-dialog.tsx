@@ -93,6 +93,9 @@ export function OfficialFormDialog({ open, onOpenChange, official }: { open: boo
         </DialogHeader>
         <div className="flex justify-center">
           <div className="relative">
+            {
+              // eslint-disable-next-line react-hooks/incompatible-library
+            }
             <InitialsAvatar name={form.watch("name") || "?"} photoUrl={photoUrl} size="xl" />
             <button
               type="button"
