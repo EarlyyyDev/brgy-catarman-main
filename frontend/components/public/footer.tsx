@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Mail, MapPin, Phone } from "lucide-react"
 import { BarangaySeal } from "@/components/shared/barangay-seal"
 import { PrivacyPolicyDialog } from "@/components/public/privacy-policy-dialog"
+import { PortalSitemapModal } from "@/components/public/portal-sitemap-modal"
 import { TermsAndConditionsDialog } from "@/components/public/terms-dialog"
 import { usePublicSettings } from "@/lib/api/hooks/use-settings"
 import { usePublicEmergencyContacts } from "@/lib/api/hooks/use-emergency-contacts"
@@ -30,6 +31,7 @@ export function Footer() {
   const { emergencyContacts } = usePublicEmergencyContacts()
   const [privacyOpen, setPrivacyOpen] = React.useState(false)
   const [termsOpen, setTermsOpen] = React.useState(false)
+  const [portalSitemapOpen, setPortalSitemapOpen] = React.useState(false)
 
   return (
     <>
@@ -132,9 +134,9 @@ export function Footer() {
               Terms & Conditions
             </button>
             <span className="text-white/25">•</span>
-            <Link href="/sitemap.xml" className="transition-colors hover:text-white">
-              Sitemap
-            </Link>
+            <button type="button" onClick={() => setPortalSitemapOpen(true)} className="transition-colors hover:text-white">
+              Portal Sitemap
+            </button>
             <span className="hidden text-white/25 sm:inline">•</span>
             <p className="hidden sm:inline">Built for transparent and efficient local governance.</p>
           </div>
@@ -143,6 +145,7 @@ export function Footer() {
     </footer>
     <PrivacyPolicyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
     <TermsAndConditionsDialog open={termsOpen} onOpenChange={setTermsOpen} />
+    <PortalSitemapModal open={portalSitemapOpen} onOpenChange={setPortalSitemapOpen} />
     </>
   )
 }

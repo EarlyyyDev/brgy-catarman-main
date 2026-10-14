@@ -1,25 +1,23 @@
 "use client"
 
 import * as React from "react"
-import { usePublicSettings } from "@/lib/api/hooks/use-settings"
 
 const FAVICON_LINK_ID = "app-dynamic-favicon"
-const DEFAULT_FAVICON = "/catarman-logo.jpg"
+const DEFAULT_FAVICON = "/favicon.svg"
 
 export function FaviconSync() {
-  const { settings } = usePublicSettings()
-  const logoUrl = settings.logoUrl
-
   React.useEffect(() => {
     let link = document.getElementById(FAVICON_LINK_ID) as HTMLLinkElement | null
     if (!link) {
       link = document.createElement("link")
       link.id = FAVICON_LINK_ID
       link.rel = "icon"
+      link.type = "image/svg+xml"
       document.head.appendChild(link)
     }
-    link.href = logoUrl || DEFAULT_FAVICON
-  }, [logoUrl])
+
+    link.href = DEFAULT_FAVICON
+  }, [])
 
   return null
 }

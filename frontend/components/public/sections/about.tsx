@@ -60,8 +60,8 @@ export function About() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3">
-              <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3 lg:items-start">
+              <div className="h-fit rounded-2xl border border-primary/15 bg-primary/5 p-4 lg:p-3.5">
                 <div className="flex items-center gap-2 text-primary">
                   <ShieldCheck className="size-4" />
                   <span className="text-xs font-semibold uppercase tracking-wide">Founded</span>
@@ -69,7 +69,7 @@ export function About() {
                 <p className="mt-3 font-heading text-2xl font-bold text-foreground">{systemSettings.founded}</p>
               </div>
 
-              <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="h-fit rounded-2xl border border-border bg-background/80 p-4 lg:p-3.5">
                 <div className="flex items-center gap-2 text-primary">
                   <Users className="size-4" />
                   <span className="text-xs font-semibold uppercase tracking-wide">Population</span>
@@ -77,7 +77,7 @@ export function About() {
                 <p className="mt-3 font-heading text-2xl font-bold text-foreground">{systemSettings.population}</p>
               </div>
 
-              <div className="rounded-2xl border border-border bg-background/80 p-4">
+              <div className="h-fit rounded-2xl border border-border bg-background/80 p-4 lg:p-3.5">
                 <div className="flex items-center gap-2 text-primary">
                   <Navigation className="size-4" />
                   <span className="text-xs font-semibold uppercase tracking-wide">Land Area</span>

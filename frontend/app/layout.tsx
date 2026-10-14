@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   },
   applicationName: "e-Catarman",
   title: {
-    default: "e-Catarman | Digital Barangay Operations Management System",
-    template: "%s | e-Catarman",
+    default: "e-Catarman",
+    template: "%s",
   },
   description:
     "e-Catarman is the official digital barangay system for Barangay Catarman, featuring barangay history, current officials, emergency hotlines, public services, announcements, and online requests.",
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
       "Official digital barangay system for Barangay Catarman, including public announcements, emergency hotlines, and community information.",
   },
   icons: {
-    icon: "/catarman-logo.jpg",
-    shortcut: "/catarman-logo.jpg",
-    apple: "/catarman-logo.jpg",
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
 };
 
