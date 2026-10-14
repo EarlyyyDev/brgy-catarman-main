@@ -204,6 +204,7 @@ export function useAnnouncementEngagement(announcement: Announcement, isStaffCon
   }
 
   return {
+    reactionCounts,
     likeCount,
     topReactions,
     reaction,

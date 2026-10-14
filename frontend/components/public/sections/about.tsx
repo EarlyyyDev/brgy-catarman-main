@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRight, BookOpen, MapPin, Navigation, ShieldCheck, Users } from "lucide-react"
+import { ArrowRight, BookOpen, MapPin } from "lucide-react"
 import { usePublicSettings } from "@/lib/api/hooks/use-settings"
 
 const landmarkHighlights = [
@@ -8,13 +8,6 @@ const landmarkHighlights = [
   "School zone and community learning hub",
   "Health center and emergency response routes",
   "Market area and public service corridors",
-]
-
-const localServiceHighlights = [
-  { title: "Barangay Hall", value: "Local governance and public assistance" },
-  { title: "Health Center", value: "Primary care and wellness services" },
-  { title: "School Zone", value: "Education and youth development" },
-  { title: "Public Market", value: "Commercial activity and community access" },
 ]
 
 const barangayQuickStats = [
@@ -58,32 +51,6 @@ export function About() {
               <p className="mt-5 text-base leading-relaxed text-foreground/80 sm:text-lg">
                 {systemSettings.historyText}
               </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-3 lg:items-start">
-              <div className="h-fit rounded-2xl border border-primary/15 bg-primary/5 p-4 lg:p-3.5">
-                <div className="flex items-center gap-2 text-primary">
-                  <ShieldCheck className="size-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wide">Founded</span>
-                </div>
-                <p className="mt-3 font-heading text-2xl font-bold text-foreground">{systemSettings.founded}</p>
-              </div>
-
-              <div className="h-fit rounded-2xl border border-border bg-background/80 p-4 lg:p-3.5">
-                <div className="flex items-center gap-2 text-primary">
-                  <Users className="size-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wide">Population</span>
-                </div>
-                <p className="mt-3 font-heading text-2xl font-bold text-foreground">{systemSettings.population}</p>
-              </div>
-
-              <div className="h-fit rounded-2xl border border-border bg-background/80 p-4 lg:p-3.5">
-                <div className="flex items-center gap-2 text-primary">
-                  <Navigation className="size-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wide">Land Area</span>
-                </div>
-                <p className="mt-3 font-heading text-2xl font-bold text-foreground">{systemSettings.landArea}</p>
-              </div>
             </div>
           </div>
         </div>
@@ -146,17 +113,6 @@ export function About() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Key Service Areas</p>
-                <div className="mt-3 space-y-2">
-                  {localServiceHighlights.map((item) => (
-                    <div key={item.title} className="rounded-xl border border-border bg-secondary/20 px-3 py-2">
-                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>

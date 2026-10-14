@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize,
-  MessageCircle,
   RotateCw,
   ThumbsUp,
   X,
@@ -16,7 +15,6 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { BarangaySeal } from "@/components/shared/barangay-seal"
 import { REACTIONS, ReactionBubble, reactionByKey } from "@/components/public/reaction-icons"
-import { AnnouncementCommentPanel } from "@/components/public/announcement-comment-panel"
 import { prepareAnnouncementHtml } from "@/lib/safe-html"
 import { useAnnouncementEngagement } from "@/lib/hooks/use-announcement-engagement"
 import { useRelativeTime } from "@/lib/hooks/use-relative-time"
@@ -47,8 +45,7 @@ export function AnnouncementLightbox({ open, onOpenChange, announcement, mediaUr
   const touchStartX = React.useRef<number | null>(null)
   const viewerRef = React.useRef<HTMLDivElement>(null)
 
-  const { likeCount, reaction, pickReaction, comments, totalCommentCount, addComment, viewerKey, viewerName, invalidate } =
-    useAnnouncementEngagement(announcement, isStaffContext)
+  const { likeCount, reaction, pickReaction, reactionCounts } = useAnnouncementEngagement(announcement, isStaffContext)
   const postedAgo = useRelativeTime(announcement.createdAt)
 
   const current = mediaUrls[index]
@@ -296,11 +293,7 @@ export function AnnouncementLightbox({ open, onOpenChange, announcement, mediaUr
                 </div>
               </div>
 
-              <div className="border-t border-border pt-2 text-xs text-muted-foreground">
-                <span>{totalCommentCount} comments</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-1 border-t border-border pt-2">
+              <div className="border-t border-border pt-2">
                 <div className="relative" onMouseEnter={openPicker} onMouseLeave={scheduleClosePicker}>
                   {pickerOpen ? (
                     <div
@@ -347,22 +340,8 @@ export function AnnouncementLightbox({ open, onOpenChange, announcement, mediaUr
                     {reaction ? reactionByKey(reaction).label : "Like"}
                   </button>
                 </div>
-                <button type="button" className="flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-semibold text-muted-foreground hover:bg-secondary">
-                  <MessageCircle className="size-4" />
-                  Comment
-                </button>
               </div>
             </div>
-
-            <AnnouncementCommentPanel
-              className="flex flex-col lg:min-h-0 lg:flex-1"
-              comments={comments}
-              viewerKey={viewerKey}
-              viewerName={viewerName}
-              onAddComment={addComment}
-              onChanged={invalidate}
-              isStaffContext={isStaffContext}
-            />
           </div>
         </div>
       </DialogContent>

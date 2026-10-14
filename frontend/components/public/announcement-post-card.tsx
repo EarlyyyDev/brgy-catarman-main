@@ -1,11 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { BadgeCheck, Eye, Globe, MessageCircle, MoreHorizontal, Pencil, Pin, PinOff, ThumbsUp, Trash2 } from "lucide-react"
+import { BadgeCheck, Eye, Globe, MoreHorizontal, Pencil, Pin, PinOff, ThumbsUp, Trash2 } from "lucide-react"
 import { BarangaySeal } from "@/components/shared/barangay-seal"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { REACTIONS, ReactionBubble, reactionByKey, type ReactionKey } from "@/components/public/reaction-icons"
-import { AnnouncementCommentsDialog } from "@/components/public/announcement-comments-dialog"
 import { AnnouncementReactionsDialog } from "@/components/public/announcement-reactions-dialog"
 import { AnnouncementMediaGrid } from "@/components/public/announcement-media-grid"
 import { AnnouncementLightbox } from "@/components/public/announcement-lightbox"
@@ -35,7 +34,6 @@ export function AnnouncementPostCard({
   /** True only inside the staff/admin dashboard -- see useAnnouncementEngagement. */
   isStaffContext?: boolean
 }) {
-  const [commentsOpen, setCommentsOpen] = React.useState(false)
   const [reactionsOpen, setReactionsOpen] = React.useState(false)
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
@@ -43,7 +41,7 @@ export function AnnouncementPostCard({
   const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = React.useRef(false)
 
-  const { likeCount, topReactions, reaction, pickReaction: pickReactionRaw, comments, totalCommentCount, addComment, viewerKey, viewerName, invalidate } =
+  const { likeCount, topReactions, reaction, pickReaction: pickReactionRaw, reactionCounts } =
     useAnnouncementEngagement(announcement, isStaffContext)
   const postedAgo = useRelativeTime(announcement.createdAt)
 
@@ -160,13 +158,7 @@ export function AnnouncementPostCard({
           dangerouslySetInnerHTML={{ __html: prepareAnnouncementHtml(announcement.content) }}
         />
         {isLong ? (
-          <button
-            type="button"
-            onClick={() => setCommentsOpen(true)}
-            className="mt-1 text-sm font-semibold text-muted-foreground hover:text-primary hover:underline"
-          >
-            See more
-          </button>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">Read the full announcement above.</p>
         ) : null}
 
         {mediaUrls.length > 0 ? <AnnouncementMediaGrid urls={mediaUrls} onMediaClick={setLightboxIndex} /> : null}
@@ -177,15 +169,10 @@ export function AnnouncementPostCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between px-4 pb-2 text-sm text-muted-foreground">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
-            {reaction ? <ReactionBubble reaction={reaction} className="size-4" /> : <ThumbsUp className="size-4" />}
-            {likeCount}
-          </span>
-          <button type="button" onClick={() => setCommentsOpen(true)} className="hover:underline">
-            {totalCommentCount} comments
-          </button>
-        </div>
+        <span className="flex items-center gap-1.5">
+          {reaction ? <ReactionBubble reaction={reaction} className="size-4" /> : <ThumbsUp className="size-4" />}
+          {likeCount}
+        </span>
 
         {likeCount > 0 ? (
           <button
@@ -203,7 +190,7 @@ export function AnnouncementPostCard({
 
       <div className="mx-4 border-t border-border" />
 
-      <div className="grid grid-cols-2 gap-1 p-2">
+      <div className="p-2">
         <div className="relative" onMouseEnter={openPicker} onMouseLeave={scheduleClosePicker}>
           {pickerOpen ? (
             <div
@@ -247,33 +234,12 @@ export function AnnouncementPostCard({
             {reaction ? reactionByKey(reaction).label : "Like"}
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setCommentsOpen(true)}
-          className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary"
-        >
-          <MessageCircle className="size-4" />
-          Comment
-        </button>
       </div>
-
-      <AnnouncementCommentsDialog
-        open={commentsOpen}
-        onOpenChange={setCommentsOpen}
-        announcement={announcement}
-        likeCount={likeCount}
-        comments={comments}
-        viewerKey={viewerKey}
-        viewerName={viewerName}
-        onAddComment={addComment}
-        onChanged={invalidate}
-        isStaffContext={isStaffContext}
-      />
 
       <AnnouncementReactionsDialog
         open={reactionsOpen}
         onOpenChange={setReactionsOpen}
-        reactionCount={likeCount}
+        reactionCounts={reactionCounts}
         userReaction={reaction}
       />
 

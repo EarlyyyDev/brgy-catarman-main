@@ -4,27 +4,41 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { InitialsAvatar } from "@/components/shared/initials-avatar"
-import { ReactionBubble, type ReactionKey } from "@/components/public/reaction-icons"
+import { ReactionBubble, reactionByKey, type ReactionKey } from "@/components/public/reaction-icons"
 
 interface AnnouncementReactionsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  reactionCount: number
+  reactionCounts: Record<string, number>
   userReaction: ReactionKey | null
 }
 
-/** The backend only exposes aggregate per-type counts, not individual
- * reactor identities (most reactions are anonymous, so there's no name to
- * show) — this lists generic entries for the real count, with the current
- * viewer's own reaction distinguished as "(You)" when present. */
-export function AnnouncementReactionsDialog({ open, onOpenChange, reactionCount, userReaction }: AnnouncementReactionsDialogProps) {
+export function AnnouncementReactionsDialog({ open, onOpenChange, reactionCounts, userReaction }: AnnouncementReactionsDialogProps) {
   const entries = React.useMemo(() => {
-    const count = Math.max(reactionCount, userReaction ? 1 : 0)
-    return Array.from({ length: count }, (_, i) => ({
-      isYou: userReaction !== null && i === 0,
-      reaction: i === 0 && userReaction ? userReaction : ("like" as ReactionKey),
-    }))
-  }, [reactionCount, userReaction])
+    const mapped = Object.entries(reactionCounts)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, count]) => {
+        const reaction = reactionByKey((key.toLowerCase() as ReactionKey) || "like")
+        return {
+          reaction: reaction.key,
+          count,
+          isYou: userReaction !== null && reaction.key === userReaction,
+        }
+      })
+
+    if (userReaction && !mapped.some((entry) => entry.reaction === userReaction)) {
+      mapped.unshift({
+        reaction: userReaction,
+        count: 1,
+        isYou: true,
+      })
+    }
+
+    return mapped
+  }, [reactionCounts, userReaction])
+
+  const totalReactions = entries.reduce((sum, entry) => sum + entry.count, 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -36,7 +50,7 @@ export function AnnouncementReactionsDialog({ open, onOpenChange, reactionCount,
 
         <div className="relative flex shrink-0 items-center gap-1 border-b border-border px-4 py-3">
           <p className="rounded-md px-2 py-1.5 text-sm font-semibold text-primary">
-            All <span className="text-xs">{entries.length}</span>
+            All <span className="text-xs">{totalReactions}</span>
           </p>
           <button
             type="button"
@@ -49,15 +63,21 @@ export function AnnouncementReactionsDialog({ open, onOpenChange, reactionCount,
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {entries.map((r, i) => (
-            <div key={i} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-secondary">
-              <div className="relative">
-                <InitialsAvatar name={r.isYou ? "You" : "Resident"} size="md" />
-                <ReactionBubble reaction={r.reaction} className="absolute -bottom-1 -right-1 size-4 ring-2 ring-card" />
+          {entries.map((entry, index) => (
+            <div key={`${entry.reaction}-${index}`} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-secondary">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <InitialsAvatar name={entry.isYou ? "You" : "Resident"} size="md" />
+                  <ReactionBubble reaction={entry.reaction} className="absolute -bottom-1 -right-1 size-4 ring-2 ring-card" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {entry.isYou ? "You" : "Resident"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{reactionByKey(entry.reaction).label}</p>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-foreground">
-                {r.isYou ? "You" : "Resident"}
-              </p>
+              <span className="text-sm font-semibold text-foreground">{entry.count}</span>
             </div>
           ))}
         </div>
