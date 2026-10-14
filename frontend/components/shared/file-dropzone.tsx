@@ -48,7 +48,6 @@ export function FileDropzone({
 
   React.useEffect(() => {
     if (autoOpen) inputRef.current?.click()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpen])
 
   async function handleFiles(fileList: FileList | null) {
