@@ -16,6 +16,8 @@ import { FileDropzone } from "@/components/shared/file-dropzone"
 import { RecaptchaCheckbox } from "@/components/shared/recaptcha-checkbox"
 import { ResidentPickerField, type ResidentPickerValue } from "@/components/shared/resident-picker-field"
 import { SubmissionStatus, type SubmissionStatusValue } from "@/components/shared/submission-status"
+import { PrivacyPolicyDialog } from "@/components/public/privacy-policy-dialog"
+import { TermsAndConditionsDialog } from "@/components/public/terms-dialog"
 import { DOCUMENT_TYPES } from "@/data/certificates"
 import { useSubmitPublicCertificateRequest } from "@/lib/api/hooks/use-certificate-requests"
 import { usePublicDocumentTypes } from "@/lib/api/hooks/use-document-types"
@@ -33,6 +35,8 @@ const requestSchema = z
     purpose: z.string().min(5, "Please describe the purpose of your request."),
     isRepresentative: z.boolean(),
     representativeName: z.string().optional(),
+    acceptedPrivacyPolicy: z.boolean().refine((value) => value, "Please read and accept the privacy policy before submitting."),
+    acceptedTerms: z.boolean().refine((value) => value, "Please accept the terms and conditions before submitting."),
   })
   .superRefine((data, ctx) => {
     if (data.documentTypes.includes("Other Barangay Document") && !data.otherDocumentLabel?.trim()) {
@@ -58,6 +62,8 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
   const [selectedResident, setSelectedResident] = React.useState<ResidentPickerValue | null>(null)
   const [requirementsError, setRequirementsError] = React.useState<string | null>(null)
   const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatusValue | null>(null)
+  const [privacyOpen, setPrivacyOpen] = React.useState(false)
+  const [termsOpen, setTermsOpen] = React.useState(false)
   const [phase, setPhase] = React.useState<"form" | "success">("form")
   const [referenceNumber, setReferenceNumber] = React.useState("")
   const [submittedDocumentTypes, setSubmittedDocumentTypes] = React.useState<DocumentType[]>([])
@@ -73,6 +79,8 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
       purpose: "",
       isRepresentative: false,
       representativeName: "",
+      acceptedPrivacyPolicy: false,
+      acceptedTerms: false,
     },
   })
 
@@ -397,8 +405,55 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
                   <FileDropzone label="Other Supporting Documents" hint="Optional, multiple files allowed" value={otherDocs} onChange={setOtherDocs} />
                 </div>
 
-                <div className="flex flex-col items-start gap-3 border-t border-border pt-6">
-                  <h2 className="font-heading text-base font-bold text-foreground">4. Verification</h2>
+                <div className="space-y-3 border-t border-border pt-6">
+                  <h2 className="font-heading text-base font-bold text-foreground">4. Consent and Verification</h2>
+
+                  <FormField
+                    control={form.control}
+                    name="acceptedPrivacyPolicy"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 rounded-md border border-border p-3">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                        </FormControl>
+                        <div className="space-y-1">
+                          <FormLabel className="!mt-0 cursor-pointer font-medium">I understand the privacy policy</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            I acknowledge that my information will be processed for official barangay services and I have read the
+                            <button type="button" onClick={() => setPrivacyOpen(true)} className="ml-1 inline font-medium text-primary underline-offset-4 hover:underline">
+                              privacy policy
+                            </button>
+                            .
+                          </p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="acceptedTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 rounded-md border border-border p-3">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                        </FormControl>
+                        <div className="space-y-1">
+                          <FormLabel className="!mt-0 cursor-pointer font-medium">I agree to the terms and conditions</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            I understand that the information I provide is for official barangay processing and that I have read the
+                            <button type="button" onClick={() => setTermsOpen(true)} className="ml-1 inline font-medium text-primary underline-offset-4 hover:underline">
+                              terms and conditions
+                            </button>
+                            .
+                          </p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <RecaptchaCheckbox token={captchaToken} onChange={setCaptchaToken} />
                 </div>
 
@@ -415,6 +470,8 @@ export function RequestDocumentDialog({ open, onOpenChange }: { open: boolean; o
           </>
         )}
       </DialogContent>
+      <PrivacyPolicyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
+      <TermsAndConditionsDialog open={termsOpen} onOpenChange={setTermsOpen} />
     </Dialog>
   )
 }

@@ -1,8 +1,11 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { Mail, MapPin, Phone } from "lucide-react"
 import { BarangaySeal } from "@/components/shared/barangay-seal"
+import { PrivacyPolicyDialog } from "@/components/public/privacy-policy-dialog"
+import { TermsAndConditionsDialog } from "@/components/public/terms-dialog"
 import { usePublicSettings } from "@/lib/api/hooks/use-settings"
 import { usePublicEmergencyContacts } from "@/lib/api/hooks/use-emergency-contacts"
 import { usePublicDialogStore, type PublicDialogKey } from "@/lib/stores/public-dialog-store"
@@ -25,8 +28,11 @@ export function Footer() {
   const setOpenDialog = usePublicDialogStore((s) => s.setOpenDialog)
   const { settings: systemSettings } = usePublicSettings()
   const { emergencyContacts } = usePublicEmergencyContacts()
+  const [privacyOpen, setPrivacyOpen] = React.useState(false)
+  const [termsOpen, setTermsOpen] = React.useState(false)
 
   return (
+    <>
     <footer
       className="border-t border-white/10 text-white/80"
       style={{ backgroundColor: "color-mix(in srgb, var(--primary) 85%, black)" }}
@@ -115,11 +121,24 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/50 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-white/50 sm:flex-row">
           <p>© {new Date().getFullYear()} Barangay Catarman. All rights reserved.</p>
-          <p>Built for transparent and efficient local governance.</p>
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
+            <button type="button" onClick={() => setPrivacyOpen(true)} className="transition-colors hover:text-white">
+              Privacy Policy
+            </button>
+            <span className="text-white/25">•</span>
+            <button type="button" onClick={() => setTermsOpen(true)} className="transition-colors hover:text-white">
+              Terms & Conditions
+            </button>
+            <span className="hidden text-white/25 sm:inline">•</span>
+            <p className="hidden sm:inline">Built for transparent and efficient local governance.</p>
+          </div>
         </div>
       </div>
     </footer>
+    <PrivacyPolicyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
+    <TermsAndConditionsDialog open={termsOpen} onOpenChange={setTermsOpen} />
+    </>
   )
 }

@@ -17,6 +17,9 @@ import { MultiCameraCapture } from "@/components/shared/multi-camera-capture"
 import { RecaptchaCheckbox } from "@/components/shared/recaptcha-checkbox"
 import { ResidentPickerField, type ResidentPickerValue } from "@/components/shared/resident-picker-field"
 import { SubmissionStatus, type SubmissionStatusValue } from "@/components/shared/submission-status"
+import { PrivacyPolicyDialog } from "@/components/public/privacy-policy-dialog"
+import { TermsAndConditionsDialog } from "@/components/public/terms-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { INCIDENT_CATEGORIES } from "@/data/complaints"
 import { useSubmitComplaint } from "@/lib/api/hooks/use-complaints"
 import { ApiError } from "@/lib/api/types"
@@ -33,6 +36,8 @@ const incidentSchema = z
     incidentDate: z.string().min(1, "Please select the incident date."),
     incidentTime: z.string().min(1, "Please select the incident time."),
     description: z.string().min(15, "Please provide more details (at least 15 characters)."),
+    acceptedPrivacyPolicy: z.boolean().refine((value) => value, "Please read and accept the privacy policy before submitting."),
+    acceptedTerms: z.boolean().refine((value) => value, "Please accept the terms and conditions before submitting."),
   })
   .superRefine((data, ctx) => {
     if (data.category === "Other" && !data.otherCategoryLabel?.trim()) {
@@ -49,6 +54,8 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
   const [captchaToken, setCaptchaToken] = React.useState<string | null>(null)
   const [selectedResident, setSelectedResident] = React.useState<ResidentPickerValue | null>(null)
   const [formError, setFormError] = React.useState<string | null>(null)
+  const [privacyOpen, setPrivacyOpen] = React.useState(false)
+  const [termsOpen, setTermsOpen] = React.useState(false)
   const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatusValue | null>(null)
   const [phase, setPhase] = React.useState<"form" | "success">("form")
   const [referenceNumber, setReferenceNumber] = React.useState("")
@@ -65,6 +72,8 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
       incidentDate: new Date().toISOString().split("T")[0],
       incidentTime: "",
       description: "",
+      acceptedPrivacyPolicy: false,
+      acceptedTerms: false,
     },
   })
 
@@ -339,8 +348,55 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
                   )}
                 />
 
-                <div className="flex flex-col items-start gap-3 border-t border-border pt-6">
-                  <h2 className="font-heading text-base font-bold text-foreground">5. Verification</h2>
+                <div className="space-y-3 border-t border-border pt-6">
+                  <h2 className="font-heading text-base font-bold text-foreground">5. Consent and Verification</h2>
+
+                  <FormField
+                    control={form.control}
+                    name="acceptedPrivacyPolicy"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 rounded-md border border-border p-3">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                        </FormControl>
+                        <div className="space-y-1">
+                          <FormLabel className="!mt-0 cursor-pointer font-medium">I understand the privacy policy</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            I acknowledge that my information will be handled according to the barangay privacy standards and I have read the
+                            <button type="button" onClick={() => setPrivacyOpen(true)} className="ml-1 inline font-medium text-primary underline-offset-4 hover:underline">
+                              privacy policy
+                            </button>
+                            .
+                          </p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="acceptedTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 rounded-md border border-border p-3">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                        </FormControl>
+                        <div className="space-y-1">
+                          <FormLabel className="!mt-0 cursor-pointer font-medium">I agree to the terms and conditions</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            I understand that this report is for official barangay review and that I have read the
+                            <button type="button" onClick={() => setTermsOpen(true)} className="ml-1 inline font-medium text-primary underline-offset-4 hover:underline">
+                              terms and conditions
+                            </button>
+                            .
+                          </p>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <RecaptchaCheckbox token={captchaToken} onChange={setCaptchaToken} />
                 </div>
 
@@ -357,6 +413,8 @@ export function ReportIncidentDialog({ open, onOpenChange }: { open: boolean; on
           </>
         )}
       </DialogContent>
+      <PrivacyPolicyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
+      <TermsAndConditionsDialog open={termsOpen} onOpenChange={setTermsOpen} />
     </Dialog>
   )
 }
