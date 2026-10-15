@@ -85,19 +85,16 @@ function SystemSettingsPage() {
       ? [{ id: "existing-ai-avatar", name: "ai-assistant-avatar", url: settings.aiAssistantAvatarUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
       : []
   )
-  const [captainSignature, setCaptainSignature] = React.useState<UploadedFile[]>(
-    settings.captainSignatureUrl
-      ? [{ id: "existing-captain-signature", name: "captain-signature", url: settings.captainSignatureUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
-      : []
-  )
-  const [secretarySignature, setSecretarySignature] = React.useState<UploadedFile[]>(
-    settings.secretarySignatureUrl
-      ? [{ id: "existing-secretary-signature", name: "secretary-signature", url: settings.secretarySignatureUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
-      : []
-  )
+  const [captainSignature, setCaptainSignature] = React.useState(settings.captainSignatureUrl ?? "")
+  const [secretarySignature, setSecretarySignature] = React.useState(settings.secretarySignatureUrl ?? "")
   const [officialFormOpen, setOfficialFormOpen] = React.useState(false)
   const [editingOfficial, setEditingOfficial] = React.useState<Official | undefined>()
   const [deletingOfficialId, setDeletingOfficialId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setCaptainSignature(settings.captainSignatureUrl ?? "")
+    setSecretarySignature(settings.secretarySignatureUrl ?? "")
+  }, [settings.captainSignatureUrl, settings.secretarySignatureUrl])
 
   // Goals/objectives are variable-length lists -- edited as one item per
   // line rather than building a full dynamic add/remove row UI for them.
@@ -158,11 +155,10 @@ function SystemSettingsPage() {
   }
 
   async function saveCertificateSignatures() {
-    const [captainSignatureUrl, secretarySignatureUrl] = await Promise.all([
-      resolveImageUrl(captainSignature, settings.captainSignatureUrl ?? ""),
-      resolveImageUrl(secretarySignature, settings.secretarySignatureUrl ?? ""),
-    ])
-    updateSettings({ captainSignatureUrl, secretarySignatureUrl })
+    updateSettings({
+      captainSignatureUrl: captainSignature || undefined,
+      secretarySignatureUrl: secretarySignature || undefined,
+    })
     toast.success("Certificate signatures updated.")
   }
 
@@ -418,11 +414,11 @@ function SystemSettingsPage() {
               <div className="border-t border-border pt-6">
                 <p className="mb-3 text-sm font-semibold text-foreground">Certificate Signatures</p>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  Upload the official signature images that should appear on printed certificates for the Barangay Captain and Barangay Secretary. Leave blank to use the text-based fallback name.
+                  Draw the official e-signature that should appear on printed certificates for the Barangay Captain and Barangay Secretary. This is used directly on the certificate and is not a scanned photo or PDF image.
                 </p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FileDropzone label="Captain Signature" accept="image/*" multiple={false} value={captainSignature} onChange={setCaptainSignature} />
-                  <FileDropzone label="Secretary Signature" accept="image/*" multiple={false} value={secretarySignature} onChange={setSecretarySignature} />
+                  <SignaturePadField label="Barangay Captain Signature" value={captainSignature} onChange={setCaptainSignature} />
+                  <SignaturePadField label="Barangay Secretary Signature" value={secretarySignature} onChange={setSecretarySignature} />
                 </div>
                 <Button className="mt-3" onClick={saveCertificateSignatures}>
                   Save Signatures
@@ -467,6 +463,120 @@ function SystemSettingsPage() {
           if (deletingOfficialId) deleteOfficialMutation.mutate(deletingOfficialId)
         }}
       />
+    </div>
+  )
+}
+
+function SignaturePadField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
+  const drawingRef = React.useRef(false)
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const ratio = window.devicePixelRatio || 1
+    const rect = canvas.getBoundingClientRect()
+    canvas.width = rect.width * ratio
+    canvas.height = rect.height * ratio
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = "#0f172a"
+    ctx.fillStyle = "#ffffff"
+    ctx.clearRect(0, 0, rect.width, rect.height)
+    ctx.fillRect(0, 0, rect.width, rect.height)
+
+    if (value) {
+      const img = new Image()
+      img.onload = () => {
+        const nextCtx = canvas.getContext("2d")
+        if (!nextCtx) return
+        nextCtx.clearRect(0, 0, canvas.width, canvas.height)
+        nextCtx.fillStyle = "#ffffff"
+        nextCtx.fillRect(0, 0, canvas.width, canvas.height)
+        nextCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      }
+      img.src = value
+    }
+  }, [value])
+
+  function getPoint(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    }
+  }
+
+  function beginDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext("2d")
+    const point = getPoint(event)
+    if (!canvas || !ctx || !point) return
+
+    drawingRef.current = true
+    ctx.beginPath()
+    ctx.moveTo(point.x, point.y)
+    ctx.lineTo(point.x, point.y)
+    ctx.stroke()
+    canvas.setPointerCapture(event.pointerId)
+  }
+
+  function draw(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext("2d")
+    const point = getPoint(event)
+    if (!canvas || !ctx || !drawingRef.current || !point) return
+
+    ctx.lineTo(point.x, point.y)
+    ctx.stroke()
+  }
+
+  function endDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas || !drawingRef.current) return
+    drawingRef.current = false
+    canvas.releasePointerCapture(event.pointerId)
+    onChange(canvas.toDataURL("image/png"))
+  }
+
+  function clearSignature() {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext("2d")
+    if (!canvas || !ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    onChange("")
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="rounded-lg border border-border bg-background p-2">
+        <canvas
+          ref={canvasRef}
+          className="h-28 w-full rounded-md border border-dashed border-border bg-white"
+          onPointerDown={beginDrawing}
+          onPointerMove={draw}
+          onPointerUp={endDrawing}
+          onPointerLeave={endDrawing}
+          onPointerCancel={endDrawing}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground">Draw using the mouse or touch.</p>
+        <Button type="button" variant="ghost" size="sm" onClick={clearSignature}>
+          Clear
+        </Button>
+      </div>
     </div>
   )
 }

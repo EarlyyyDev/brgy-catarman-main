@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import toast from "react-hot-toast"
 import { Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,8 +44,14 @@ export function CertificatePricingForm() {
 
   async function saveClaimDeadline() {
     const days = Number(claimDeadlineDays)
-    if (!Number.isFinite(days) || days < 1) return
-    updateSettings.mutate({ claimDeadlineDays: days })
+    if (!Number.isFinite(days) || days < 1) {
+      toast.error("Please enter a valid claim deadline in days.")
+      return
+    }
+    updateSettings.mutate(
+      { claimDeadlineDays: days },
+      { onSuccess: () => toast.success("Claim deadline set successfully.") },
+    )
   }
 
   return (
