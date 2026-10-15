@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FileDropzone } from "@/components/shared/file-dropzone"
 import { OfficialFormDialog } from "@/components/dashboard/settings/official-form-dialog"
 import { EmergencyContactsSettings } from "@/components/dashboard/settings/emergency-contacts-settings"
@@ -476,11 +477,12 @@ function SystemSettingsPage() {
 }
 
 function SignaturePadField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
+  const previewCanvasRef = React.useRef<HTMLCanvasElement | null>(null)
+  const modalCanvasRef = React.useRef<HTMLCanvasElement | null>(null)
   const drawingRef = React.useRef(false)
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
 
-  React.useEffect(() => {
-    const canvas = canvasRef.current
+  function renderCanvas(canvas: HTMLCanvasElement | null, source: string) {
     if (!canvas) return
 
     const ctx = canvas.getContext("2d")
@@ -488,8 +490,8 @@ function SignaturePadField({ label, value, onChange }: { label: string; value: s
 
     const ratio = window.devicePixelRatio || 1
     const rect = canvas.getBoundingClientRect()
-    canvas.width = rect.width * ratio
-    canvas.height = rect.height * ratio
+    canvas.width = Math.max(rect.width * ratio, 1)
+    canvas.height = Math.max(rect.height * ratio, 1)
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
     ctx.lineCap = "round"
     ctx.lineJoin = "round"
@@ -499,22 +501,25 @@ function SignaturePadField({ label, value, onChange }: { label: string; value: s
     ctx.clearRect(0, 0, rect.width, rect.height)
     ctx.fillRect(0, 0, rect.width, rect.height)
 
-    if (value) {
-      const img = new Image()
-      img.onload = () => {
-        const nextCtx = canvas.getContext("2d")
-        if (!nextCtx) return
-        nextCtx.clearRect(0, 0, canvas.width, canvas.height)
-        nextCtx.fillStyle = "#ffffff"
-        nextCtx.fillRect(0, 0, canvas.width, canvas.height)
-        nextCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      }
-      img.src = value
+    if (!source) return
+
+    const img = new Image()
+    img.onload = () => {
+      const nextCtx = canvas.getContext("2d")
+      if (!nextCtx) return
+      nextCtx.clearRect(0, 0, canvas.width, canvas.height)
+      nextCtx.fillStyle = "#ffffff"
+      nextCtx.fillRect(0, 0, canvas.width, canvas.height)
+      nextCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
     }
+    img.src = source
+  }
+
+  React.useEffect(() => {
+    renderCanvas(previewCanvasRef.current, value)
   }, [value])
 
-  function getPoint(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
+  function getPoint(event: React.PointerEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement | null) {
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
     return {
@@ -524,11 +529,12 @@ function SignaturePadField({ label, value, onChange }: { label: string; value: s
   }
 
   function beginDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
+    const canvas = modalCanvasRef.current
     const ctx = canvas?.getContext("2d")
-    const point = getPoint(event)
+    const point = getPoint(event, canvas)
     if (!canvas || !ctx || !point) return
 
+    event.preventDefault()
     drawingRef.current = true
     ctx.beginPath()
     ctx.moveTo(point.x, point.y)
@@ -538,53 +544,95 @@ function SignaturePadField({ label, value, onChange }: { label: string; value: s
   }
 
   function draw(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
+    const canvas = modalCanvasRef.current
     const ctx = canvas?.getContext("2d")
-    const point = getPoint(event)
+    const point = getPoint(event, canvas)
     if (!canvas || !ctx || !drawingRef.current || !point) return
 
+    event.preventDefault()
     ctx.lineTo(point.x, point.y)
     ctx.stroke()
   }
 
   function endDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current
+    const canvas = modalCanvasRef.current
     if (!canvas || !drawingRef.current) return
     drawingRef.current = false
+    event.preventDefault()
     canvas.releasePointerCapture(event.pointerId)
-    onChange(canvas.toDataURL("image/png"))
   }
 
   function clearSignature() {
-    const canvas = canvasRef.current
+    const canvas = modalCanvasRef.current
     const ctx = canvas?.getContext("2d")
     if (!canvas || !ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    onChange("")
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    setIsDialogOpen(nextOpen)
+    if (nextOpen) {
+      requestAnimationFrame(() => {
+        renderCanvas(modalCanvasRef.current, value)
+      })
+    }
+  }
+
+  function saveSignature() {
+    const canvas = modalCanvasRef.current
+    if (!canvas) return
+    onChange(canvas.toDataURL("image/png"))
+    setIsDialogOpen(false)
   }
 
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="rounded-lg border border-border bg-background p-2">
+      <button
+        type="button"
+        onClick={() => handleOpenChange(true)}
+        className="w-full rounded-lg border border-border bg-background p-2 text-left transition hover:border-primary/60 hover:bg-accent/40"
+      >
         <canvas
-          ref={canvasRef}
+          ref={previewCanvasRef}
           className="h-28 w-full rounded-md border border-dashed border-border bg-white"
-          onPointerDown={beginDrawing}
-          onPointerMove={draw}
-          onPointerUp={endDrawing}
-          onPointerLeave={endDrawing}
-          onPointerCancel={endDrawing}
         />
-      </div>
+      </button>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground">Draw using the mouse or touch.</p>
-        <Button type="button" variant="ghost" size="sm" onClick={clearSignature}>
+        <p className="text-[11px] text-muted-foreground">Tap to sign.</p>
+        <Button type="button" variant="ghost" size="sm" onClick={() => { onChange(""); setIsDialogOpen(false) }}>
           Clear
         </Button>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{label}</DialogTitle>
+            <DialogDescription>Sign inside the box below, then press Set Signature to save it.</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border bg-white p-2">
+            <canvas
+              ref={modalCanvasRef}
+              className="h-36 w-full rounded-md border border-dashed border-border bg-white touch-none"
+              onPointerDown={beginDrawing}
+              onPointerMove={draw}
+              onPointerUp={endDrawing}
+              onPointerLeave={endDrawing}
+              onPointerCancel={endDrawing}
+            />
+          </div>
+          <DialogFooter className="sm:justify-between">
+            <Button type="button" variant="outline" onClick={clearSignature}>Clear</Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="button" onClick={saveSignature}>Set Signature</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
