@@ -11,7 +11,7 @@ import { EmergencyContactsSection } from "@/components/public/sections/emergency
 import { FAQ } from "@/components/public/sections/faq"
 
 export const metadata: Metadata = {
-  title: "Barangay Catarman | Community Information and Services",
+  title: "eCatarman",
   description:
     "Learn about the history of Barangay Catarman, current barangay officials, emergency hotlines, public services, announcements, and community updates.",
   keywords: [

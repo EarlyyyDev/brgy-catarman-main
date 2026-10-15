@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
-  applicationName: "e-Catarman",
+  applicationName: "eCatarman",
   title: {
-    default: "e-Catarman",
+    default: "eCatarman",
     template: "%s",
   },
   description:
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
       "Official digital barangay system for Barangay Catarman, including public announcements, emergency hotlines, and community information.",
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/catarman-logo.jpg",
+    shortcut: "/catarman-logo.jpg",
+    apple: "/catarman-logo.jpg",
   },
 };
 
