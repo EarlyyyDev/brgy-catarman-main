@@ -67,24 +67,17 @@ function SystemSettingsPage() {
   const { register, handleSubmit, reset } = useForm<SystemSettings>({ defaultValues: settings })
   React.useEffect(() => reset(settings), [settings, reset])
 
-  const [logo, setLogo] = React.useState<UploadedFile[]>([])
-  const [seal, setSeal] = React.useState<UploadedFile[]>([])
-  const [municipalLogo, setMunicipalLogo] = React.useState<UploadedFile[]>(
-    settings.municipalLogoUrl
-      ? [{ id: "existing-municipal-logo", name: "municipal-logo", url: settings.municipalLogoUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
-      : []
-  )
-  const [heroBg, setHeroBg] = React.useState<UploadedFile[]>(
-    settings.heroBackgroundUrl ? [{ id: "existing-hero-bg", name: "hero-background", url: settings.heroBackgroundUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }] : []
-  )
-  const [loginBg, setLoginBg] = React.useState<UploadedFile[]>(
-    settings.loginBackgroundUrl ? [{ id: "existing-login-bg", name: "login-background", url: settings.loginBackgroundUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }] : []
-  )
-  const [aiAvatar, setAiAvatar] = React.useState<UploadedFile[]>(
-    settings.aiAssistantAvatarUrl
-      ? [{ id: "existing-ai-avatar", name: "ai-assistant-avatar", url: settings.aiAssistantAvatarUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
-      : []
-  )
+  function buildUploadedFile(url: string | null | undefined, fallbackName: string): UploadedFile[] {
+    if (!url) return []
+    return [{ id: `existing-${fallbackName}`, name: fallbackName, url, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
+  }
+
+  const [logo, setLogo] = React.useState<UploadedFile[]>(buildUploadedFile(settings.logoUrl, "logo"))
+  const [seal, setSeal] = React.useState<UploadedFile[]>(buildUploadedFile(settings.sealUrl, "seal"))
+  const [municipalLogo, setMunicipalLogo] = React.useState<UploadedFile[]>(buildUploadedFile(settings.municipalLogoUrl, "municipal-logo"))
+  const [heroBg, setHeroBg] = React.useState<UploadedFile[]>(buildUploadedFile(settings.heroBackgroundUrl, "hero-background"))
+  const [loginBg, setLoginBg] = React.useState<UploadedFile[]>(buildUploadedFile(settings.loginBackgroundUrl, "login-background"))
+  const [aiAvatar, setAiAvatar] = React.useState<UploadedFile[]>(buildUploadedFile(settings.aiAssistantAvatarUrl, "ai-assistant-avatar"))
   const [captainSignature, setCaptainSignature] = React.useState(settings.captainSignatureUrl ?? "")
   const [secretarySignature, setSecretarySignature] = React.useState(settings.secretarySignatureUrl ?? "")
   const [officialFormOpen, setOfficialFormOpen] = React.useState(false)
@@ -92,9 +85,24 @@ function SystemSettingsPage() {
   const [deletingOfficialId, setDeletingOfficialId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
+    setLogo(buildUploadedFile(settings.logoUrl, "logo"))
+    setSeal(buildUploadedFile(settings.sealUrl, "seal"))
+    setMunicipalLogo(buildUploadedFile(settings.municipalLogoUrl, "municipal-logo"))
+    setHeroBg(buildUploadedFile(settings.heroBackgroundUrl, "hero-background"))
+    setLoginBg(buildUploadedFile(settings.loginBackgroundUrl, "login-background"))
+    setAiAvatar(buildUploadedFile(settings.aiAssistantAvatarUrl, "ai-assistant-avatar"))
     setCaptainSignature(settings.captainSignatureUrl ?? "")
     setSecretarySignature(settings.secretarySignatureUrl ?? "")
-  }, [settings.captainSignatureUrl, settings.secretarySignatureUrl])
+  }, [
+    settings.logoUrl,
+    settings.sealUrl,
+    settings.municipalLogoUrl,
+    settings.heroBackgroundUrl,
+    settings.loginBackgroundUrl,
+    settings.aiAssistantAvatarUrl,
+    settings.captainSignatureUrl,
+    settings.secretarySignatureUrl,
+  ])
 
   // Goals/objectives are variable-length lists -- edited as one item per
   // line rather than building a full dynamic add/remove row UI for them.
