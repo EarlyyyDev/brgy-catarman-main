@@ -85,6 +85,16 @@ function SystemSettingsPage() {
       ? [{ id: "existing-ai-avatar", name: "ai-assistant-avatar", url: settings.aiAssistantAvatarUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
       : []
   )
+  const [captainSignature, setCaptainSignature] = React.useState<UploadedFile[]>(
+    settings.captainSignatureUrl
+      ? [{ id: "existing-captain-signature", name: "captain-signature", url: settings.captainSignatureUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
+      : []
+  )
+  const [secretarySignature, setSecretarySignature] = React.useState<UploadedFile[]>(
+    settings.secretarySignatureUrl
+      ? [{ id: "existing-secretary-signature", name: "secretary-signature", url: settings.secretarySignatureUrl, sizeKb: 0, mimeType: "image/*", uploadedAt: "" }]
+      : []
+  )
   const [officialFormOpen, setOfficialFormOpen] = React.useState(false)
   const [editingOfficial, setEditingOfficial] = React.useState<Official | undefined>()
   const [deletingOfficialId, setDeletingOfficialId] = React.useState<string | null>(null)
@@ -145,6 +155,15 @@ function SystemSettingsPage() {
     const aiAssistantAvatarUrl = await resolveImageUrl(aiAvatar, settings.aiAssistantAvatarUrl ?? "")
     updateSettings({ aiAssistantAvatarUrl })
     toast.success("AI assistant chathead picture updated.")
+  }
+
+  async function saveCertificateSignatures() {
+    const [captainSignatureUrl, secretarySignatureUrl] = await Promise.all([
+      resolveImageUrl(captainSignature, settings.captainSignatureUrl ?? ""),
+      resolveImageUrl(secretarySignature, settings.secretarySignatureUrl ?? ""),
+    ])
+    updateSettings({ captainSignatureUrl, secretarySignatureUrl })
+    toast.success("Certificate signatures updated.")
   }
 
   return (
@@ -393,6 +412,20 @@ function SystemSettingsPage() {
                 <FileDropzone label="Upload Chathead Picture" accept="image/*" multiple={false} value={aiAvatar} onChange={setAiAvatar} />
                 <Button className="mt-3" onClick={saveAiAvatar}>
                   Save Chathead Picture
+                </Button>
+              </div>
+
+              <div className="border-t border-border pt-6">
+                <p className="mb-3 text-sm font-semibold text-foreground">Certificate Signatures</p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Upload the official signature images that should appear on printed certificates for the Barangay Captain and Barangay Secretary. Leave blank to use the text-based fallback name.
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FileDropzone label="Captain Signature" accept="image/*" multiple={false} value={captainSignature} onChange={setCaptainSignature} />
+                  <FileDropzone label="Secretary Signature" accept="image/*" multiple={false} value={secretarySignature} onChange={setSecretarySignature} />
+                </div>
+                <Button className="mt-3" onClick={saveCertificateSignatures}>
+                  Save Signatures
                 </Button>
               </div>
 

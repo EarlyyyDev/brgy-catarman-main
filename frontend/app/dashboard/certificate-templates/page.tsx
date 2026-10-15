@@ -4,7 +4,7 @@ import * as React from "react"
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
-import { ArrowLeft, Download, Eye, Plus, Printer, Save, X } from "lucide-react"
+import { ArrowLeft, Download, Eye, Plus, Printer, Save, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
@@ -14,7 +14,7 @@ import { CertificatePreviewPaper } from "@/components/dashboard/certificate-temp
 import { TemplateSettingsBar } from "@/components/dashboard/certificate-templates/template-settings-bar"
 import { CertificatePreviewDialog } from "@/components/dashboard/certificate-templates/mobile-preview-sheet"
 import { ScaledDocumentPreview } from "@/components/shared/scaled-document-preview"
-import { useCertificateTemplates, useAddCertificateTemplate, useUpdateCertificateTemplate } from "@/lib/api/hooks/use-certificate-templates"
+import { useCertificateTemplates, useAddCertificateTemplate, useUpdateCertificateTemplate, useDeleteCertificateTemplate } from "@/lib/api/hooks/use-certificate-templates"
 import { useAllCertificateRequests } from "@/lib/api/hooks/use-certificate-requests"
 import { useAllResidents } from "@/lib/api/hooks/use-residents"
 import { usePublicSettings, useUpdateSettings, useUploadSettingsImage } from "@/lib/api/hooks/use-settings"
@@ -47,6 +47,7 @@ function CertificateTemplatesPageContent() {
   const { templates, documentTypes, isLoading: templatesLoading } = useCertificateTemplates()
   const addTemplate = useAddCertificateTemplate()
   const updateTemplate = useUpdateCertificateTemplate()
+  const deleteTemplate = useDeleteCertificateTemplate()
   const { certificateRequests } = useAllCertificateRequests()
   const { residents } = useAllResidents()
   const { settings } = usePublicSettings()
@@ -93,6 +94,7 @@ function CertificateTemplatesPageContent() {
   }
 
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
   const [draft, setDraft] = React.useState(() => blankDraft())
   const [resetConfirmOpen, setResetConfirmOpen] = React.useState(false)
   const [previewOpen, setPreviewOpen] = React.useState(false)
@@ -210,6 +212,16 @@ function CertificateTemplatesPageContent() {
     }
   }
 
+  const templateToDelete = selectedTemplateId ? templates.find((template) => template.id === selectedTemplateId) : undefined
+
+  async function handleDeleteTemplate() {
+    if (!selectedTemplateId) return
+    await deleteTemplate.mutateAsync(selectedTemplateId)
+    setSelectedTemplateId(null)
+    setDraft(blankDraft())
+    setDeleteConfirmOpen(false)
+  }
+
   return (
     <div className="space-y-6">
       <div className="print:hidden">
@@ -245,6 +257,16 @@ function CertificateTemplatesPageContent() {
               <Button type="button" className="h-10" onClick={handleSave}>
                 <Save className="size-4" />
                 Save Template
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 border-destructive/40 text-destructive hover:bg-destructive/5"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={!selectedTemplateId}
+              >
+                <Trash2 className="size-4" />
+                Delete Template
               </Button>
               <Button type="button" variant="outline" className="h-10" onClick={handlePrint}>
                 <Printer className="size-4" />
@@ -425,6 +447,20 @@ function CertificateTemplatesPageContent() {
         destructive
         confirmLabel="Reset"
         onConfirm={handleReset}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => !open && setDeleteConfirmOpen(false)}
+        title="Delete Certificate Template"
+        description={
+          templateToDelete
+            ? `This will permanently delete "${templateToDelete.name}". This action cannot be undone.`
+            : "Select a template to delete."
+        }
+        destructive
+        confirmLabel="Delete Template"
+        onConfirm={handleDeleteTemplate}
       />
     </div>
   )

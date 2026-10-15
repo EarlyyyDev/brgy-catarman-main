@@ -39,6 +39,8 @@ export const CertificatePreviewPaper = React.forwardRef<HTMLDivElement, Certific
         logoSize,
         barangayLogoUrl: settings.documentLogoUrl,
         municipalLogoUrl: settings.municipalLogoUrl,
+        captainSignatureUrl: settings.captainSignatureUrl,
+        secretarySignatureUrl: settings.secretarySignatureUrl,
         municipalityName: settings.municipality,
         residentPhotoUrl,
       }),

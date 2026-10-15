@@ -11,6 +11,8 @@ export interface SystemSettings {
    * separate from logoUrl (the site-wide brand mark) so uploading one never
    * changes the other. */
   documentLogoUrl?: string
+  captainSignatureUrl?: string
+  secretarySignatureUrl?: string
   /** Chathead picture for the public-facing AI assistant widget. */
   aiAssistantAvatarUrl?: string
   heroBackgroundUrl?: string

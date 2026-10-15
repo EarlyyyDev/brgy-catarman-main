@@ -19,6 +19,8 @@ export function toSystemSettings(raw: Record<string, unknown>): SystemSettings {
     sealUrl: str(raw.sealUrl),
     municipalLogoUrl: str(raw.municipalLogoUrl) || undefined,
     documentLogoUrl: str(raw.documentLogoUrl) || undefined,
+    captainSignatureUrl: str(raw.captainSignatureUrl) || undefined,
+    secretarySignatureUrl: str(raw.secretarySignatureUrl) || undefined,
     aiAssistantAvatarUrl: str(raw.aiAssistantAvatarUrl) || undefined,
     heroBackgroundUrl: str(raw.heroBackgroundUrl) || undefined,
     loginBackgroundUrl: str(raw.loginBackgroundUrl) || undefined,

@@ -224,7 +224,10 @@ function residentPhotoBox(name: string, photoUrl?: string): string {
   return `<span style="display:inline-flex;align-items:center;justify-content:center;width:96px;height:112px;border:1px solid #E2E8F0;background:#0F172A;color:#fff;font-family:Georgia,serif;font-size:22px;font-weight:700;">${initials(name)}</span>`
 }
 
-function signatureBlock(name: string, role: string): string {
+function signatureBlock(name: string, role: string, signatureUrl?: string): string {
+  if (signatureUrl) {
+    return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:220px;"><img src="${signatureUrl}" alt="" style="max-width:220px;max-height:72px;object-fit:contain;display:block;" /><span style="margin-top:2px;width:100%;border-top:1px solid #0F172A;padding-top:4px;font-size:11px;font-weight:600;">${role}</span></span>`
+  }
   return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:220px;"><span style="font-family:'Brush Script MT',cursive;font-size:26px;">${name}</span><span style="margin-top:2px;width:100%;border-top:1px solid #0F172A;padding-top:4px;font-size:11px;font-weight:600;">${role}</span></span>`
 }
 
@@ -252,6 +255,8 @@ interface RenderOptions {
   showBarangayDrySeal: boolean
   barangayLogoUrl?: string
   municipalLogoUrl?: string
+  captainSignatureUrl?: string
+  secretarySignatureUrl?: string
   logoSize: number
   municipalityName: string
   residentPhotoUrl?: string
@@ -302,10 +307,10 @@ export function renderTemplateHtml(bodyHtml: string, data: SampleCertificateData
           replacement = options.showBarangayDrySeal ? drySealSvg() : ""
           break
         case "captain_signature":
-          replacement = signatureBlock(data.barangay_captain, "Barangay Captain")
+          replacement = signatureBlock(data.barangay_captain, "Barangay Captain", options.captainSignatureUrl)
           break
         case "secretary_signature":
-          replacement = signatureBlock(data.barangay_secretary, "Barangay Secretary")
+          replacement = signatureBlock(data.barangay_secretary, "Barangay Secretary", options.secretarySignatureUrl)
           break
         case "qr_code":
           replacement = qrCodeSvg(data.reference_number)

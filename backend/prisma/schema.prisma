@@ -825,6 +825,8 @@ model SystemSettings {
   sealUrl              String?
   municipalLogoUrl     String?
   documentLogoUrl      String?
+  captainSignatureUrl  String?
+  secretarySignatureUrl String?
   heroBackgroundUrl    String?
   loginBackgroundUrl   String?
   aiAssistantAvatarUrl String?

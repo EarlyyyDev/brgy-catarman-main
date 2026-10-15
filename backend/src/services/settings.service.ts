@@ -12,6 +12,8 @@ export interface SettingsInput {
   sealUrl?: string;
   municipalLogoUrl?: string;
   documentLogoUrl?: string;
+  captainSignatureUrl?: string;
+  secretarySignatureUrl?: string;
   heroBackgroundUrl?: string;
   loginBackgroundUrl?: string;
   aiAssistantAvatarUrl?: string;
