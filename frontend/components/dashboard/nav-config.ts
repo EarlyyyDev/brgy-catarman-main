@@ -66,7 +66,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Staff Accounts", href: "/dashboard/staff", icon: Users2, roles: ["Administrator"] },
       { label: "System Settings", href: "/dashboard/settings", icon: Settings, roles: ["Administrator"] },
-      { label: "Backup & Restore", href: "/dashboard/backup", icon: Database, roles: ["Administrator"] },
       { label: "Activity Logs", href: "/dashboard/logs", icon: ScrollText, roles: ["Administrator"] },
     ],
   },
